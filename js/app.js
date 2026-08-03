@@ -554,22 +554,17 @@ function openCompose() {
 }
 
 function renderComposeChips() {
-  // 種類（色）
-  const categories = [{ id: null, label: "自動", color: null }, ...state.classify.categories];
-  const colorChips = categories.map((cat) => {
+  // 種類（色）。既定では何も選ばれておらず、選ばないと追加できない。
+  const colorChips = state.classify.categories.map((cat) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
     chip.textContent = cat.label;
     const selected = composeCategory === cat.id;
     if (selected) chip.classList.add("selected");
-    if (cat.color) {
-      chip.style.borderColor = cat.color;
-      chip.style.color = selected ? "#fff" : cat.color;
-      chip.style.background = selected ? cat.color : "none";
-    } else {
-      chip.classList.add("plain");
-    }
+    chip.style.borderColor = cat.color;
+    chip.style.color = selected ? "#fff" : cat.color;
+    chip.style.background = selected ? cat.color : "none";
     chip.addEventListener("click", () => {
       composeCategory = cat.id;
       renderComposeChips();
@@ -637,6 +632,7 @@ async function submitCompose(e) {
     endTime: computeEndTime(),
   };
 
+  if (!composeCategory) return showComposeError("種類（色）を選んでください。");
   if (!$("c-title").value.trim()) return showComposeError("予定名を入力してください。");
   if (!input.date) return showComposeError("日付を入力してください。");
   if (!input.allDay) {
