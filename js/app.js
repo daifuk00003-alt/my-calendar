@@ -5,6 +5,7 @@ import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAI
 import { signIn, signOut, getStoredToken } from "./auth.js";
 import { listCalendars, listEvents, createEvent, deleteEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
+import { textOn, readableOnWhite } from "./colors.js";
 import * as store from "./store.js";
 import { demoEvents, demoHolidays } from "./demo.js";
 import {
@@ -169,6 +170,16 @@ function lastDayOfTimedEvent(ev) {
   return startOfDay(end);
 }
 
+/**
+ * 画面に出す予定名。先頭の【 】は色が代わりに伝えるので取り除く。
+ * Google カレンダー側のタイトルはそのまま（印がないと次回の色が決まらないため）。
+ */
+function displayTitle(ev) {
+  const tag = ev.color?.tag;
+  if (!tag || !ev.title.startsWith(tag)) return ev.title;
+  return ev.title.slice(tag.length).trim() || ev.color.label;
+}
+
 function rebuildIndex() {
   const map = new Map();
   for (const ev of state.events) {
@@ -232,7 +243,10 @@ function renderMonth() {
       const bar = document.createElement("div");
       bar.className = ev.allDay ? "bar allday" : "bar";  // OPEN-04 暫定
       bar.style.background = ev.color.color;
-      if (SHOW_TITLE_IN_MONTH) bar.textContent = ev.title;
+      if (SHOW_TITLE_IN_MONTH) {
+        bar.textContent = displayTitle(ev);
+        bar.style.color = textOn(ev.color.color); // 明るい色には濃い文字を載せる
+      }
       bars.appendChild(bar);
     });
     if (events.length > MAX_BARS) {
@@ -292,7 +306,7 @@ function renderDetail() {
     if (SHOW_TITLE_IN_DETAIL) {
       const title = document.createElement("div");
       title.className = "ev-title";
-      title.textContent = ev.title;
+      title.textContent = displayTitle(ev);
       main.appendChild(title);
     }
 
@@ -396,7 +410,7 @@ function openInGoogle(ev) {
 
 function openSheet(ev) {
   $("sheet-time").textContent = timeRangeLabel(ev, state.selectedDate);
-  $("sheet-title").textContent = ev.title;
+  $("sheet-title").textContent = displayTitle(ev);
   $("sheet-note").textContent = ev.description;
   $("sheet").hidden = false;
 }
@@ -482,7 +496,7 @@ function attachSwipe(wrap, row) {
 }
 
 async function confirmDelete(ev) {
-  const label = ev.title || "この予定";
+  const label = displayTitle(ev) || "この予定";
   if (!window.confirm(`「${label}」を削除します。よろしいですか？\n（Google カレンダーのゴミ箱に移動します）`)) return;
 
   closeSwipe();
@@ -555,8 +569,8 @@ function renderComposeChips() {
     chip.textContent = cat.label;
     const selected = composeCategory === cat.id;
     if (selected) chip.classList.add("selected");
-    chip.style.borderColor = cat.color;
-    chip.style.color = selected ? "#fff" : cat.color;
+    chip.style.borderColor = readableOnWhite(cat.color, 3);
+    chip.style.color = selected ? textOn(cat.color) : readableOnWhite(cat.color);
     chip.style.background = selected ? cat.color : "none";
     chip.addEventListener("click", () => {
       composeCategory = cat.id;

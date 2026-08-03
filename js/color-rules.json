@@ -2,13 +2,13 @@
   "_note": "categories の並び順が、追加フォームの種類ボタンの並び順になる。rules は上から順に評価され、最初に一致した色が採用される（FR-14 先勝ち）。【 】で囲んだキーワードは本人が付けた印として扱い、重複ヒット印（●）を出さない。",
 
   "categories": [
-    { "id": "metsa",   "label": "メッツア",   "color": "#047857" },
-    { "id": "kohaku",  "label": "琥珀",       "color": "#c2410c" },
-    { "id": "reysol",  "label": "柏レイソル", "color": "#a16207" },
-    { "id": "asobi",   "label": "遊び",       "color": "#be185d" },
-    { "id": "study",   "label": "学習",       "color": "#6d28d9" },
-    { "id": "anything","label": "なんでも",   "color": "#b91c1c" },
-    { "id": "aiplus",  "label": "AIプラス",   "color": "#1d4ed8" }
+    { "id": "metsa",   "label": "メッツア",   "color": "#8b5cf6" },
+    { "id": "kohaku",  "label": "琥珀",       "color": "#38bdf8" },
+    { "id": "reysol",  "label": "柏レイソル", "color": "#facc15" },
+    { "id": "asobi",   "label": "遊び",       "color": "#f97316" },
+    { "id": "study",   "label": "学習",       "color": "#a3e635" },
+    { "id": "anything","label": "なんでも",   "color": "#ef4444" },
+    { "id": "aiplus",  "label": "AIプラス",   "color": "#ec4899" }
   ],
 
   "rules": [

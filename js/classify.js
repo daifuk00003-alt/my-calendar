@@ -54,7 +54,7 @@ export function createClassifier(ruleSet) {
     }
 
     if (matched.length === 0) {            // FR-15 未分類はグレー
-      return { color: UNCLASSIFIED.color, label: UNCLASSIFIED.label, categoryId: null, duplicate: false, matched: [] };
+      return { color: UNCLASSIFIED.color, label: UNCLASSIFIED.label, categoryId: null, duplicate: false, tag: null, matched: [] };
     }
 
     const category = byId.get(matched[0].category); // 先勝ち
@@ -64,6 +64,8 @@ export function createClassifier(ruleSet) {
       categoryId: category.id,
       // FR-16 重複ヒット印。ただし明示的な印が先頭なら、それが答えなので曖昧ではない
       duplicate: matched.length >= 2 && !matched[0].explicit,
+      // 表示するときに取り除く印（色で種類が分かるため、文字としては不要）
+      tag: matched[0].explicit ? matched[0].keyword : null,
       matched: matched.map((r) => r.keyword),
     };
   }
