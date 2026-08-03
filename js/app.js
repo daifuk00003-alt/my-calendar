@@ -200,7 +200,12 @@ function renderMonth() {
   const first = startOfGrid(state.viewMonth);
   const today = startOfDay(new Date());
 
-  for (let i = 0; i < 42; i++) {
+  // その月が占める週数だけ描く（4〜6週）。余った行を作らないぶん1マスを高くできる。
+  const daysInMonth = new Date(state.viewMonth.getFullYear(), state.viewMonth.getMonth() + 1, 0).getDate();
+  const weeks = Math.ceil((state.viewMonth.getDay() + daysInMonth) / 7);
+  grid.style.setProperty("--rows", weeks);
+
+  for (let i = 0; i < weeks * 7; i++) {
     const day = addDays(first, i);
     const key = dateKey(day);
     const holiday = state.holidaysByDate.get(key);
