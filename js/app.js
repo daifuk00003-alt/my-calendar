@@ -111,7 +111,8 @@ async function refresh({ initial = false, force = false } = {}) {
   state.loading = true;
   setUpdatedLabel("更新中…");
   try {
-    if (initial || state.calendars.length === 0) {
+    // 手動更新時もカレンダー一覧を取り直す（共有などで増えた分を拾うため）
+    if (initial || force || state.calendars.length === 0) {
       state.calendars = await listCalendars();
     }
 
