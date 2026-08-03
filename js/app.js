@@ -626,7 +626,7 @@ async function submitCompose(e) {
 
   const input = {
     title: composeTitle(),
-    description: $("c-note").value.trim(),
+    description: "", // 追加フォームにメモ欄は置いていない（詳細は Google 公式アプリで書く）
     allDay: $("c-allday").checked,
     date: dateKey(state.selectedDate),
     startTime: $("c-start").value,
