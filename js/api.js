@@ -49,9 +49,12 @@ async function call(path, params = {}, init = null) {
     throw new Error(`API エラー (${res.status})`);
   }
   if (res.status === 429) throw new Error("アクセス回数の上限に達しました。しばらく待って再試行してください。"); // CON-03
+  if (res.status === 410) throw new Error("この予定はすでに削除されています。");
   if (!res.ok) throw new Error(`API エラー (${res.status})`);
 
-  return res.json();
+  if (res.status === 204) return null;          // 削除は本文を返さない
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 /** カレンダー一覧（FR-08 の設定対象、FR-09 の祝日判定に使う） */
@@ -100,6 +103,15 @@ export async function createEvent(calendarId, input) {
     { method: "POST", body }
   );
   return normalizeEvent(data, calendarId);
+}
+
+/** 予定を削除する（Google 側ではゴミ箱に入る） */
+export async function deleteEvent(calendarId, eventId) {
+  await call(
+    `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    {},
+    { method: "DELETE" }
+  );
 }
 
 function nextDay(ymd) {

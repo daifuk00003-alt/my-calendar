@@ -144,10 +144,25 @@ body { display: flex; flex-direction: column; }
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
   padding: 0 16px calc(var(--safe-bottom) + 20px);
 }
+/* 行を左スワイプすると、下に隠れている削除ボタンが出る */
+.ev-wrap { position: relative; overflow: hidden; }
+.ev-actions {
+  position: absolute; top: 0; right: 0; bottom: 1px;
+  display: flex;
+}
+.ev-delete {
+  width: 88px; border: none; background: var(--red); color: #fff;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+}
 .ev {
+  position: relative;
   display: flex; gap: 12px;
   padding: 12px 0; border-bottom: 1px solid var(--line);
+  background: var(--bg);
   cursor: pointer;
+  touch-action: pan-y;                    /* 縦スクロールは残し、横は自前で扱う */
+  transition: transform .18s ease;
+  will-change: transform;
 }
 .ev-chip { flex: none; width: 8px; border-radius: 4px; align-self: stretch; }
 .ev-main { flex: 1; min-width: 0; }

@@ -3,7 +3,7 @@
 
 import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
 import { signIn, signOut, getStoredToken } from "./auth.js";
-import { listCalendars, listEvents, createEvent, AuthExpiredError } from "./api.js";
+import { listCalendars, listEvents, createEvent, deleteEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import * as store from "./store.js";
 import { demoEvents, demoHolidays } from "./demo.js";
@@ -308,8 +308,34 @@ function renderDetail() {
     }
 
     row.appendChild(main);
-    row.addEventListener("click", () => openInGoogle(ev));      // FR-26
-    frag.appendChild(row);
+
+    // 左スワイプで削除ボタンを出す
+    const wrap = document.createElement("div");
+    wrap.className = "ev-wrap";
+
+    const actions = document.createElement("div");
+    actions.className = "ev-actions";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "ev-delete";
+    del.textContent = "削除";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      confirmDelete(ev);
+    });
+    actions.appendChild(del);
+
+    row.addEventListener("click", () => {
+      if (wrap.dataset.swiped === "1") {  // スワイプ操作の直後は開かない
+        closeSwipe();
+        return;
+      }
+      openInGoogle(ev);                                          // FR-26
+    });
+
+    wrap.append(actions, row);
+    attachSwipe(wrap, row);
+    frag.appendChild(wrap);
   }
   list.replaceChildren(frag);
   // ブラウザが再読み込み時にスクロール位置を復元してくるため、次フレームでも先頭に戻す
@@ -386,6 +412,100 @@ function toast(message) {
   el.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (el.hidden = true), 3000);
+}
+
+/* ============================ 予定の削除（左スワイプ） ============================ */
+
+const SWIPE_OPEN_X = -88; // 削除ボタンの幅
+let openedSwipe = null;   // いま開いている行
+
+function setSwipe(wrap, row, open) {
+  if (open) {
+    if (openedSwipe && openedSwipe.wrap !== wrap) closeSwipe();
+    openedSwipe = { wrap, row };
+    wrap.classList.add("open");
+    row.style.transform = `translateX(${SWIPE_OPEN_X}px)`;
+  } else {
+    if (openedSwipe && openedSwipe.wrap === wrap) openedSwipe = null;
+    wrap.classList.remove("open");
+    row.style.transform = "";
+  }
+}
+
+function closeSwipe() {
+  if (!openedSwipe) return;
+  const { wrap, row } = openedSwipe;
+  openedSwipe = null;
+  wrap.classList.remove("open");
+  row.style.transform = "";
+}
+
+function attachSwipe(wrap, row) {
+  let startX = 0, dx = 0, active = false, captured = false;
+
+  row.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    startX = e.clientX;
+    dx = 0;
+    active = true;
+    captured = false;
+    wrap.dataset.swiped = "0";
+    row.style.transition = "none";
+  });
+
+  row.addEventListener("pointermove", (e) => {
+    if (!active) return;
+    dx = e.clientX - startX;
+    if (!captured && Math.abs(dx) > 8) {
+      captured = true;
+      wrap.dataset.swiped = "1";
+      try { row.setPointerCapture(e.pointerId); } catch { /* 無視 */ }
+    }
+    if (!captured) return;
+    const base = wrap.classList.contains("open") ? SWIPE_OPEN_X : 0;
+    row.style.transform = `translateX(${Math.min(0, Math.max(SWIPE_OPEN_X - 16, base + dx))}px)`;
+  });
+
+  const finish = () => {
+    if (!active) return;
+    active = false;
+    row.style.transition = "";
+    if (!captured) return;
+    const base = wrap.classList.contains("open") ? SWIPE_OPEN_X : 0;
+    setSwipe(wrap, row, base + dx < SWIPE_OPEN_X / 2);
+    // クリック判定が終わってからフラグを戻す
+    setTimeout(() => (wrap.dataset.swiped = "0"), 0);
+  };
+
+  row.addEventListener("pointerup", finish);
+  row.addEventListener("pointercancel", finish);
+}
+
+async function confirmDelete(ev) {
+  const label = ev.title || "この予定";
+  if (!window.confirm(`「${label}」を削除します。よろしいですか？\n（Google カレンダーのゴミ箱に移動します）`)) return;
+
+  closeSwipe();
+
+  if (state.demo) {
+    toast("デモ表示のため削除しません");
+    return;
+  }
+
+  try {
+    await deleteEvent(ev.calendarId, ev.id);
+    state.events = state.events.filter((x) => !(x.id === ev.id && x.calendarId === ev.calendarId));
+    rebuildIndex();
+    render();
+    toast("予定を削除しました");
+    refresh({ force: true });
+  } catch (e) {
+    if (e instanceof AuthExpiredError) {
+      showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
+      return;
+    }
+    toast(e.message || "削除に失敗しました");
+  }
 }
 
 /* ============================ 予定の追加 ============================ */
