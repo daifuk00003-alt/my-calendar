@@ -510,16 +510,7 @@ async function confirmDelete(ev) {
 
 /* ============================ 予定の追加 ============================ */
 
-const DURATIONS = [
-  { minutes: 30, label: "30分" },
-  { minutes: 60, label: "1時間" },
-  { minutes: 90, label: "1時間半" },
-  { minutes: 120, label: "2時間" },
-  { minutes: 180, label: "3時間" },
-];
-
-let composeCategory = null; // null は「自動」（キーワード判定にまかせる）
-let composeDuration = 60;
+let composeCategory = null; // 種類は必ず選ばせるので、初期状態は未選択
 
 /** 予定を追加するカレンダー。書き込めるものを優先し、なければメイン。 */
 function targetCalendarId() {
@@ -542,9 +533,10 @@ function openCompose() {
   const start = new Date(state.selectedDate);
   start.setHours(isSameDay(state.selectedDate, now) ? now.getHours() + 1 : 10, 0, 0, 0);
   $("c-start").value = hhmm(start);
+  $("c-end").value = hhmm(new Date(start.getTime() + 60 * 60_000));
+  lastStartMinutes = toMinutes($("c-start").value);
 
   composeCategory = null;
-  composeDuration = 60;
   renderComposeChips();
 
   syncAllDay();
@@ -573,36 +565,28 @@ function renderComposeChips() {
     return chip;
   });
   $("c-colors").replaceChildren(...colorChips);
-
-  // 長さ
-  const durationChips = DURATIONS.map((d) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "chip plain" + (composeDuration === d.minutes ? " selected" : "");
-    chip.textContent = d.label;
-    chip.addEventListener("click", () => {
-      composeDuration = d.minutes;
-      renderComposeChips();
-    });
-    return chip;
-  });
-  $("c-durations").replaceChildren(...durationChips);
-
-  updateEndLabel();
 }
 
-function updateEndLabel() {
-  const end = computeEndTime();
-  $("c-endlabel").textContent = end ? `→ ${end} に終わる` : "";
+/** 開始を動かしたとき、それまでの所要時間を保ったまま終了もずらす */
+let lastStartMinutes = null;
+
+function onStartChanged() {
+  const start = toMinutes($("c-start").value);
+  const end = toMinutes($("c-end").value);
+  if (start !== null && end !== null && lastStartMinutes !== null && end > lastStartMinutes) {
+    const shifted = start + (end - lastStartMinutes);
+    $("c-end").value = fromMinutes(Math.min(shifted, 24 * 60 - 1));
+  }
+  lastStartMinutes = start;
 }
 
-/** 開始時刻 + 長さ から終了時刻を出す（日をまたぐ場合は 23:59 で止める） */
-function computeEndTime() {
-  const value = $("c-start").value;
-  if (!value) return "";
+function toMinutes(value) {
+  if (!value) return null;
   const [h, m] = value.split(":").map(Number);
-  const total = h * 60 + m + composeDuration;
-  if (total >= 24 * 60) return "23:59";
+  return h * 60 + m;
+}
+
+function fromMinutes(total) {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
@@ -630,14 +614,14 @@ async function submitCompose(e) {
     allDay: $("c-allday").checked,
     date: dateKey(state.selectedDate),
     startTime: $("c-start").value,
-    endTime: computeEndTime(),
+    endTime: $("c-end").value,
   };
 
   if (!composeCategory) return showComposeError("種類（色）を選んでください。");
   if (!$("c-title").value.trim()) return showComposeError("予定名を入力してください。");
   if (!input.allDay) {
-    if (!input.startTime) return showComposeError("開始時刻を入力してください。");
-    if (input.endTime <= input.startTime) return showComposeError("開始が遅すぎます。時刻を見直してください。");
+    if (!input.startTime || !input.endTime) return showComposeError("開始と終了の時刻を入力してください。");
+    if (input.endTime <= input.startTime) return showComposeError("終了時刻は開始時刻より後にしてください。");
   }
 
   if (state.demo) {
@@ -750,7 +734,7 @@ function bindEvents() {
     if (e.target.dataset.composeClose) closeCompose();
   });
   $("c-allday").addEventListener("change", syncAllDay);
-  $("c-start").addEventListener("input", updateEndLabel);
+  $("c-start").addEventListener("input", onStartChanged);
   $("compose-form").addEventListener("submit", submitCompose);
 
   $("btn-login").addEventListener("click", onLogin);
