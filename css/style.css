@@ -190,7 +190,7 @@ body { display: flex; flex-direction: column; }
   width: 100%; padding: 12px; font-size: 15px;
   border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px;
 }
-.field-label { display: block; text-align: left; font-size: 13px; margin-bottom: 6px; }
+.field-label { display: block; text-align: left; font-size: 13px; margin: 12px 0 6px; }
 .hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; text-align: left; margin: 4px 0 16px; }
 .error { color: var(--red); font-size: 13px; margin-top: 14px; line-height: 1.6; }
 
@@ -210,10 +210,37 @@ body { display: flex; flex-direction: column; }
 .legend-swatch { width: 22px; height: 10px; border-radius: 5px; flex: none; }
 .legend-kw { font-size: 12px; color: var(--text-sub); }
 
+/* ---------- 予定の追加 ---------- */
+.fab {
+  position: fixed; right: 16px; bottom: calc(var(--safe-bottom) + 16px);
+  width: 52px; height: 52px; border-radius: 26px; border: none;
+  background: var(--accent); color: #fff;
+  font-size: 28px; line-height: 1; font-weight: 300;
+  box-shadow: 0 2px 10px rgba(0,0,0,.28);
+  display: grid; place-items: center; cursor: pointer; z-index: 20;
+}
+.fab:active { opacity: .85; }
+
+.compose-title { margin: 0 0 16px; font-size: 19px; }
+.check-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; margin: 4px 0 14px;
+}
+.check-row input { width: 20px; height: 20px; }
+.field-row { display: flex; gap: 12px; }
+.field-col { flex: 1; min-width: 0; }
+.field-row[hidden] { display: none; }
+textarea.field { resize: vertical; font-family: inherit; }
+select.field { appearance: none; background: var(--bg); }
+.compose-actions { display: flex; gap: 12px; margin-top: 8px; }
+.compose-actions .secondary-btn,
+.compose-actions .primary-btn { flex: 1; }
+
 /* ---------- 全文シート ---------- */
 .sheet { position: fixed; inset: 0; z-index: 50; }
 .sheet[hidden] { display: none; }
 .sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+#compose .sheet-body { max-height: 94%; }
 .sheet-body {
   position: absolute; left: 0; right: 0; bottom: 0;
   max-height: 80%; overflow-y: auto;

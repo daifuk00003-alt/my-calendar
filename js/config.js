@@ -3,8 +3,13 @@
 
 export const CLIENT_ID = "";
 
-// FR-01 読み取り専用スコープ（PRE-04 / NFR-06）
-export const SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+// FR-01 は読み取り専用スコープのみだったが、アプリから予定を追加する方針に変更したため
+// 予定の書き込み権限（calendar.events）を追加している。
+// カレンダー一覧の取得には readonly が必要なので、2つ並べて要求する。
+export const SCOPE = [
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events",
+].join(" ");
 
 // FR-09 祝日カレンダーの判定に使う識別子
 export const HOLIDAY_CALENDAR_MARKER = "holiday@group.v.calendar.google.com";

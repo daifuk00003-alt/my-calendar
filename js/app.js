@@ -3,7 +3,7 @@
 
 import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
 import { signIn, signOut, getStoredToken } from "./auth.js";
-import { listCalendars, listEvents, AuthExpiredError } from "./api.js";
+import { listCalendars, listEvents, createEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import * as store from "./store.js";
 import { demoEvents, demoHolidays } from "./demo.js";
@@ -388,6 +388,112 @@ function toast(message) {
   toastTimer = setTimeout(() => (el.hidden = true), 3000);
 }
 
+/* ============================ 予定の追加 ============================ */
+
+/** 選択中の日を初期値にしてフォームを開く */
+function openCompose() {
+  const form = $("compose-form");
+  form.reset();
+  $("compose-error").hidden = true;
+
+  $("c-date").value = dateKey(state.selectedDate);
+
+  // 開始時刻は「次のキリのよい時刻」、終了はその1時間後
+  const now = new Date();
+  const start = new Date(state.selectedDate);
+  start.setHours(isSameDay(state.selectedDate, now) ? now.getHours() + 1 : 10, 0, 0, 0);
+  $("c-start").value = hhmm(start);
+  $("c-end").value = hhmm(new Date(start.getTime() + 60 * 60_000));
+
+  const writable = state.calendars.filter((c) => c.writable);
+  const options = (writable.length ? writable : state.calendars).map((cal) => {
+    const opt = document.createElement("option");
+    opt.value = cal.id;
+    opt.textContent = cal.name;
+    if (cal.primary) opt.selected = true;
+    return opt;
+  });
+  if (options.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "primary";
+    opt.textContent = "メインのカレンダー";
+    options.push(opt);
+  }
+  $("c-calendar").replaceChildren(...options);
+
+  syncAllDay();
+  $("compose").hidden = false;
+  $("c-title").focus();
+}
+
+function closeCompose() {
+  $("compose").hidden = true;
+}
+
+function syncAllDay() {
+  $("c-times").hidden = $("c-allday").checked;
+}
+
+function hhmm(d) {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+async function submitCompose(e) {
+  e.preventDefault();
+  const err = $("compose-error");
+  const submit = $("c-submit");
+  err.hidden = true;
+
+  const input = {
+    title: $("c-title").value.trim(),
+    description: $("c-note").value.trim(),
+    allDay: $("c-allday").checked,
+    date: $("c-date").value,
+    startTime: $("c-start").value,
+    endTime: $("c-end").value,
+  };
+
+  if (!input.title) return showComposeError("予定名を入力してください。");
+  if (!input.date) return showComposeError("日付を入力してください。");
+  if (!input.allDay) {
+    if (!input.startTime || !input.endTime) return showComposeError("開始と終了の時刻を入力してください。");
+    if (input.endTime <= input.startTime) return showComposeError("終了時刻は開始時刻より後にしてください。");
+  }
+
+  if (state.demo) {
+    closeCompose();
+    toast("デモ表示のため保存しません");
+    return;
+  }
+
+  submit.disabled = true;
+  submit.textContent = "追加中…";
+  try {
+    await createEvent($("c-calendar").value, input);
+    closeCompose();
+    // 選択日を追加した日に合わせてから取り直す
+    selectDate(input.date);
+    await refresh({ force: true });
+    toast("予定を追加しました");
+  } catch (e2) {
+    if (e2 instanceof AuthExpiredError) {
+      closeCompose();
+      showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
+      return;
+    }
+    showComposeError(e2.message || "追加に失敗しました。");
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "追加";
+  }
+}
+
+function showComposeError(message) {
+  const err = $("compose-error");
+  err.textContent = message;
+  err.hidden = false;
+}
+
 /* ============================ 設定画面（FR-08） ============================ */
 
 function openSettings() {
@@ -444,6 +550,13 @@ function bindEvents() {
   $("sheet").addEventListener("click", (e) => {
     if (e.target.dataset.close) closeSheet();
   });
+
+  $("btn-add").addEventListener("click", openCompose);
+  $("compose").addEventListener("click", (e) => {
+    if (e.target.dataset.composeClose) closeCompose();
+  });
+  $("c-allday").addEventListener("change", syncAllDay);
+  $("compose-form").addEventListener("submit", submitCompose);
 
   $("btn-login").addEventListener("click", onLogin);
 

@@ -11,7 +11,14 @@ export class AuthExpiredError extends Error {
   }
 }
 
-async function call(path, params = {}) {
+export class WritePermissionError extends Error {
+  constructor() {
+    super("予定を追加する権限がありません。設定画面からログアウトし、もう一度ログインしてください。");
+    this.name = "WritePermissionError";
+  }
+}
+
+async function call(path, params = {}, init = null) {
   const token = getStoredToken();
   if (!token) throw new AuthExpiredError(); // FR-07
 
@@ -20,13 +27,24 @@ async function call(path, params = {}) {
     if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   }
 
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const options = { headers: { Authorization: `Bearer ${token}` } };
+  if (init) {
+    options.method = init.method;
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(init.body);
+  }
+
+  const res = await fetch(url, options);
 
   if (res.status === 401 || res.status === 403) {
     const body = await res.text();
     if (res.status === 401 || /invalid.?credential|authError/i.test(body)) {
       invalidateToken();
       throw new AuthExpiredError(); // FR-07
+    }
+    // スコープ不足（読み取り権限しか持っていない状態で書き込んだ場合）
+    if (/insufficient|ACCESS_TOKEN_SCOPE|forbiddenForServiceAccount|Request had insufficient/i.test(body)) {
+      throw new WritePermissionError();
     }
     throw new Error(`API エラー (${res.status})`);
   }
@@ -50,7 +68,46 @@ export async function listCalendars() {
     name: c.summaryOverride || c.summary || c.id,
     primary: !!c.primary,
     selectedInGoogle: c.selected !== false,
+    // owner / writer なら予定を追加できる
+    writable: c.accessRole === "owner" || c.accessRole === "writer",
   }));
+}
+
+/**
+ * 予定を追加する。
+ * @param {string} calendarId
+ * @param {{title:string, description:string, allDay:boolean, date:string, startTime?:string, endTime?:string}} input
+ */
+export async function createEvent(calendarId, input) {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const body = {
+    summary: input.title,
+    description: input.description || undefined,
+  };
+
+  if (input.allDay) {
+    body.start = { date: input.date };
+    body.end = { date: nextDay(input.date) }; // 終日予定の終了日は排他
+  } else {
+    body.start = { dateTime: `${input.date}T${input.startTime}:00`, timeZone };
+    body.end = { dateTime: `${input.date}T${input.endTime}:00`, timeZone };
+  }
+
+  const data = await call(
+    `/calendars/${encodeURIComponent(calendarId)}/events`,
+    {},
+    { method: "POST", body }
+  );
+  return normalizeEvent(data, calendarId);
+}
+
+function nextDay(ymd) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  const mm = String(next.getMonth() + 1).padStart(2, "0");
+  const dd = String(next.getDate()).padStart(2, "0");
+  return `${next.getFullYear()}-${mm}-${dd}`;
 }
 
 /**

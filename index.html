@@ -47,6 +47,50 @@
     <div id="detail-list" class="detail-list"></div>
   </section>
 
+  <button id="btn-add" class="fab" aria-label="予定を追加">＋</button>
+
+</div>
+
+<!-- ===== 予定の追加 ===== -->
+<div id="compose" class="sheet" hidden>
+  <div class="sheet-backdrop" data-compose-close="1"></div>
+  <form id="compose-form" class="sheet-body" autocomplete="off">
+    <h2 class="compose-title">予定を追加</h2>
+
+    <label class="field-label" for="c-title">予定名</label>
+    <input id="c-title" class="field" type="text" required placeholder="例：【仕事】定例ミーティング">
+
+    <label class="check-row">
+      <input id="c-allday" type="checkbox"> <span>終日</span>
+    </label>
+
+    <label class="field-label" for="c-date">日付</label>
+    <input id="c-date" class="field" type="date" required>
+
+    <div id="c-times" class="field-row">
+      <div class="field-col">
+        <label class="field-label" for="c-start">開始</label>
+        <input id="c-start" class="field" type="time" step="300">
+      </div>
+      <div class="field-col">
+        <label class="field-label" for="c-end">終了</label>
+        <input id="c-end" class="field" type="time" step="300">
+      </div>
+    </div>
+
+    <label class="field-label" for="c-note">メモ</label>
+    <textarea id="c-note" class="field" rows="3" placeholder="任意"></textarea>
+
+    <label class="field-label" for="c-calendar">追加先のカレンダー</label>
+    <select id="c-calendar" class="field"></select>
+
+    <p id="compose-error" class="error" hidden></p>
+
+    <div class="compose-actions">
+      <button type="button" class="secondary-btn" data-compose-close="1">キャンセル</button>
+      <button type="submit" id="c-submit" class="primary-btn">追加</button>
+    </div>
+  </form>
 </div>
 
 <!-- ===== ログイン画面（FR-01 / FR-07） ===== -->
