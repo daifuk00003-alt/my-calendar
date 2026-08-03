@@ -1,9 +1,8 @@
 // 自作カレンダーアプリ Phase 1
 // 閲覧専用。入力・編集は Google 公式アプリで行う（3.2 対象外）。
 
-import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
-import { signIn, signOut, getStoredToken, trySilentSignIn } from "./auth.js";
-import { listCalendars, listEvents, createEvent, updateEvent, deleteEvent, AuthExpiredError } from "./api.js";
+import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getBackend, setBackend, hasBackend } from "./config.js";
+import { ping, listCalendars, listEvents, createEvent, updateEvent, deleteEvent } from "./gas.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import { textOn, readableOnWhite } from "./colors.js";
 import * as store from "./store.js";
@@ -58,45 +57,16 @@ async function boot() {
     return;
   }
 
-  if (!getClientId()) {
-    $("clientid-setup").hidden = false;
+  if (!hasBackend()) {
     showLogin();
     return;
   }
 
   // 前回取得した予定をまず描く（FR-29）。通信を待たずに中身が見える。
-  const hasCache = restoreCache();
-  if (hasCache) {
-    showMain();
-    render();
-  }
-
-  if (getStoredToken()) {
-    if (!hasCache) {
-      showMain();
-      render();
-    }
-    await refresh({ initial: true });
-    return;
-  }
-
-  // 期限切れ。まずは画面を出さずに取り直してみる。
-  const token = await trySilentSignIn();
-  if (token) {
-    if (!hasCache) {
-      showMain();
-      render();
-    }
-    await refresh({ initial: true });
-    return;
-  }
-
-  // 静かな取り直しに失敗。キャッシュがあるなら閲覧は続けられる（FR-30）。
-  if (hasCache) {
-    showReauth(true);
-  } else {
-    showLogin();
-  }
+  restoreCache();
+  showMain();
+  render();
+  await refresh({ initial: true });
 }
 
 /** 端末に保存した予定を状態へ戻す */
@@ -155,7 +125,6 @@ async function refresh({ initial = false, force = false } = {}) {
   if (!force && !initial && rangeCovered(want, state.loadedRange)) return;
 
   state.loading = true;
-  let retryAfterSilent = false;
   setUpdatedLabel("更新中…");
   try {
     // 手動更新時もカレンダー一覧を取り直す（共有などで増えた分を拾うため）
@@ -166,21 +135,18 @@ async function refresh({ initial = false, force = false } = {}) {
     const prefs = store.loadCalendarPrefs();
     const targets = state.calendars.filter((c) => store.isCalendarEnabled(c.id, prefs));
 
-    const results = await Promise.all(targets.map((c) => listEvents(c.id, want.min, want.max)));
+    const fetched = await listEvents(targets.map((c) => c.id), want.min, want.max);
 
     const events = [];
     const holidays = new Map();
-    targets.forEach((cal, i) => {
-      const isHoliday = cal.id.includes(HOLIDAY_CALENDAR_MARKER);
-      for (const ev of results[i]) {
-        if (isHoliday) {
-          // FR-09 祝日は予定として描画せず、日付の属性として扱う
-          for (const key of spannedDateKeys(ev)) holidays.set(key, ev.title);
-        } else {
-          events.push(ev);
-        }
+    for (const ev of fetched) {
+      if (ev.calendarId.includes(HOLIDAY_CALENDAR_MARKER)) {
+        // FR-09 祝日は予定として描画せず、日付の属性として扱う
+        for (const key of spannedDateKeys(ev)) holidays.set(key, ev.title);
+      } else {
+        events.push(ev);
       }
-    });
+    }
 
     state.events = events;
     state.holidaysByDate = holidays;
@@ -196,22 +162,17 @@ async function refresh({ initial = false, force = false } = {}) {
       savedAt: state.lastUpdated,
     });
   } catch (e) {
-    if (e instanceof AuthExpiredError) {
-      // 期限切れ。まず静かに取り直し、それでもだめならキャッシュを見せたまま案内する（FR-07 / FR-30）
-      retryAfterSilent = !!(await trySilentSignIn());
-      if (!retryAfterSilent) {
-        if (state.events.length > 0) showReauth(true);
-        else showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
-      }
-      return;
-    }
     console.error(e);
-    toast(e.message || "更新に失敗しました");
+    // 取れなくてもキャッシュは見せ続ける（FR-30）
+    if (state.events.length > 0) {
+      $("reauth-text").textContent = `更新できませんでした：${e.message}`;
+      showReauth(true);
+    } else {
+      toast(e.message || "更新に失敗しました");
+    }
   } finally {
     state.loading = false;
     setUpdatedLabel();
-    // 静かに取り直せた場合だけ、同じ取得をやり直す
-    if (retryAfterSilent) refresh({ initial, force: true });
   }
 }
 
@@ -613,10 +574,6 @@ async function confirmDelete(ev) {
     toast("予定を削除しました");
     refresh({ force: true });
   } catch (e) {
-    if (e instanceof AuthExpiredError) {
-      showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
-      return;
-    }
     toast(e.message || "削除に失敗しました");
   }
 }
@@ -782,11 +739,6 @@ async function submitCompose(e) {
     await refresh({ force: true });
     toast(editing ? "予定を保存しました" : "予定を追加しました");
   } catch (e2) {
-    if (e2 instanceof AuthExpiredError) {
-      closeCompose();
-      showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
-      return;
-    }
     showComposeError(e2.message || "追加に失敗しました。");
   } finally {
     submit.disabled = false;
@@ -862,19 +814,15 @@ function bindEvents() {
   $("btn-settings-close").addEventListener("click", showMain);
 
   $("btn-logout").addEventListener("click", () => {
-    signOut();
+    if (!window.confirm("接続を解除します。もう一度URLと鍵の入力が必要になります。")) return;
+    setBackend("", "");
     store.clearCache();
     location.reload();
   });
 
-  $("btn-reauth").addEventListener("click", async () => {
-    try {
-      await signIn();
-      showReauth(false);
-      await refresh({ initial: true, force: true });
-    } catch (e) {
-      toast(e.message);
-    }
+  $("btn-reauth").addEventListener("click", () => {
+    showReauth(false);
+    refresh({ initial: true, force: true });
   });
 
   $("grid").addEventListener("click", (e) => {
@@ -906,32 +854,42 @@ function bindEvents() {
   bindGestures();
 }
 
+/** 接続先を保存して、実際につながるか確かめる */
 async function onLogin() {
   const btn = $("btn-login");
   const err = $("login-error");
   err.hidden = true;
 
-  if (!$("clientid-setup").hidden) {
-    const value = $("clientid-input").value.trim();
-    if (!value) {
-      err.textContent = "クライアント ID を入力してください。";
-      err.hidden = false;
-      return;
-    }
-    setClientId(value);
+  const url = $("backend-url").value.trim();
+  const key = $("backend-key").value.trim();
+  if (!url || !key) {
+    err.textContent = "URL と鍵の両方を入力してください。";
+    err.hidden = false;
+    return;
+  }
+  if (!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)) {
+    err.textContent = "URL は https://script.google.com/… /exec の形である必要があります。";
+    err.hidden = false;
+    return;
   }
 
+  const previous = getBackend();
+  setBackend(url, key);
+
   btn.disabled = true;
+  btn.textContent = "確認中…";
   try {
-    await signIn();
+    await ping();
     showMain();
     render();
     await refresh({ initial: true });
   } catch (e) {
+    setBackend(previous.url, previous.key); // つながらなければ元に戻す
     err.textContent = e.message;
     err.hidden = false;
   } finally {
     btn.disabled = false;
+    btn.textContent = "つなぐ";
   }
 }
 

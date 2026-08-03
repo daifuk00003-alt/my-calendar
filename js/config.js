@@ -1,15 +1,6 @@
 // アプリ設定
-// CLIENT_ID はここに直接書いてもよいし、初回起動時の画面から入力してもよい（端末内にのみ保存）。
-
-export const CLIENT_ID = "";
-
-// FR-01 は読み取り専用スコープのみだったが、アプリから予定を追加する方針に変更したため
-// 予定の書き込み権限（calendar.events）を追加している。
-// カレンダー一覧の取得には readonly が必要なので、2つ並べて要求する。
-export const SCOPE = [
-  "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/calendar.events",
-].join(" ");
+// 予定の取得と書き込みは、本人の Google アカウント上に置いた Apps Script 経由で行う。
+// スクリプトが本人として動くため、アプリ側での Google ログインは不要。
 
 // FR-09 祝日カレンダーの判定に使う識別子
 export const HOLIDAY_CALENDAR_MARKER = "holiday@group.v.calendar.google.com";
@@ -21,21 +12,33 @@ export const PREFETCH_MONTHS = 1;
 export const MAX_BARS = 3;
 export const MAX_BARS_2WEEKS = 8;
 
+// FR-23 は「開始〜終了時刻」と「メモ」のみを規定していたが、実際に描画すると
+// メモのない予定が時刻だけの行になり内容を判別できなかったため、タイトルを主役にする方針へ変更。
+export const SHOW_TITLE_IN_DETAIL = true;
+
 // FR-22 は月表示のバーに文字を載せないと定めていたが、実運用で「マスの中でも
 // 内容が少し分かる方がよい」と判断したため、バーにタイトルを載せる。
 // false にすると元の細い色バー（文字なし）に戻る。
 export const SHOW_TITLE_IN_MONTH = true;
 
-// FR-23 は「開始〜終了時刻」と「メモ」のみを規定していたが、実際に描画すると
-// メモのない予定が時刻だけの行になり内容を判別できなかったため、タイトルを主役にする方針へ変更。
-export const SHOW_TITLE_IN_DETAIL = true;
+/* ---------- 接続先（Apps Script） ---------- */
 
-const CLIENT_ID_KEY = "mycal.clientId";
+const KEY_URL = "mycal.backendUrl";
+const KEY_SECRET = "mycal.backendKey";
 
-export function getClientId() {
-  return (CLIENT_ID || localStorage.getItem(CLIENT_ID_KEY) || "").trim();
+export function getBackend() {
+  return {
+    url: (localStorage.getItem(KEY_URL) || "").trim(),
+    key: (localStorage.getItem(KEY_SECRET) || "").trim(),
+  };
 }
 
-export function setClientId(id) {
-  localStorage.setItem(CLIENT_ID_KEY, (id || "").trim());
+export function setBackend(url, key) {
+  localStorage.setItem(KEY_URL, (url || "").trim());
+  localStorage.setItem(KEY_SECRET, (key || "").trim());
+}
+
+export function hasBackend() {
+  const { url, key } = getBackend();
+  return !!url && !!key;
 }

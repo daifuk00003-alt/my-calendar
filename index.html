@@ -32,8 +32,8 @@
   </header>
 
   <div id="reauth" class="reauth" hidden>
-    <span>ログインの期限が切れました。表示は前回取得したものです。</span>
-    <button type="button" id="btn-reauth">再ログイン</button>
+    <span id="reauth-text">最新のデータを取得できませんでした。表示は前回取得したものです。</span>
+    <button type="button" id="btn-reauth">再試行</button>
   </div>
 
   <!-- 上：月表示 -->
@@ -93,20 +93,22 @@
   </form>
 </div>
 
-<!-- ===== ログイン画面（FR-01 / FR-07） ===== -->
+<!-- ===== 接続設定（初回のみ） ===== -->
 <div id="login" class="screen center" hidden>
   <div class="card">
     <h1 class="card-title">カレンダー</h1>
-    <p id="login-message" class="card-text">Google カレンダーの予定を読み取り専用で表示します。</p>
+    <p id="login-message" class="card-text">この端末とカレンダーをつなぎます。初回だけの設定です。</p>
 
-    <div id="clientid-setup" hidden>
-      <label class="field-label" for="clientid-input">Google OAuth クライアント ID</label>
-      <input id="clientid-input" class="field" type="text" inputmode="url" autocomplete="off"
-             placeholder="xxxxxxxx.apps.googleusercontent.com">
-      <p class="hint">初回のみ入力します。この端末内にのみ保存されます。</p>
-    </div>
+    <label class="field-label" for="backend-url">接続先の URL</label>
+    <input id="backend-url" class="field" type="text" inputmode="url" autocomplete="off"
+           placeholder="https://script.google.com/.../exec">
 
-    <button id="btn-login" class="primary-btn">Google でログイン</button>
+    <label class="field-label" for="backend-key">鍵</label>
+    <input id="backend-key" class="field" type="text" autocomplete="off" placeholder="英数字の文字列">
+
+    <p class="hint">この端末の中にだけ保存されます。以後ログインは不要です。</p>
+
+    <button id="btn-login" class="primary-btn">つなぐ</button>
     <p id="login-error" class="error" hidden></p>
   </div>
 </div>
@@ -126,8 +128,8 @@
     <p class="hint">Phase 1 では <code>js/color-rules.json</code> に直接記述します（FR-19c）。</p>
     <div id="legend" class="legend"></div>
 
-    <h2 class="section-title">アカウント</h2>
-    <button id="btn-logout" class="secondary-btn">ログアウト</button>
+    <h2 class="section-title">接続</h2>
+    <button id="btn-logout" class="secondary-btn">接続を解除する</button>
   </div>
 </div>
 
@@ -144,7 +146,6 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
