@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="カレンダー">
+<title>カレンダー</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== メイン画面（FR-20: 上下2分割） ===== -->
+<div id="main" class="screen" hidden>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btn-prev" aria-label="前の月">‹</button>
+    <div class="topbar-center">
+      <h1 id="month-label">—</h1>
+      <span id="updated-at" class="updated-at"></span>
+    </div>
+    <button class="icon-btn" id="btn-next" aria-label="次の月">›</button>
+    <button class="icon-btn" id="btn-settings" aria-label="設定">☰</button>
+  </header>
+
+  <!-- 上：月表示 -->
+  <section id="month-pane" class="month-pane">
+    <div id="pull-indicator" class="pull-indicator"><span id="pull-text">引っ張って更新</span></div>
+    <div class="weekdays">
+      <div class="wd sun">日</div><div class="wd">月</div><div class="wd">火</div>
+      <div class="wd">水</div><div class="wd">木</div><div class="wd">金</div><div class="wd sat">土</div>
+    </div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <!-- 下：選択日の予定詳細 -->
+  <section id="detail-pane" class="detail-pane">
+    <div class="detail-head">
+      <h2 id="detail-date">—</h2>
+      <span id="detail-holiday" class="holiday-name"></span>
+    </div>
+    <div id="detail-list" class="detail-list"></div>
+  </section>
+
+</div>
+
+<!-- ===== ログイン画面（FR-01 / FR-07） ===== -->
+<div id="login" class="screen center" hidden>
+  <div class="card">
+    <h1 class="card-title">カレンダー</h1>
+    <p id="login-message" class="card-text">Google カレンダーの予定を読み取り専用で表示します。</p>
+
+    <div id="clientid-setup" hidden>
+      <label class="field-label" for="clientid-input">Google OAuth クライアント ID</label>
+      <input id="clientid-input" class="field" type="text" inputmode="url" autocomplete="off"
+             placeholder="xxxxxxxx.apps.googleusercontent.com">
+      <p class="hint">初回のみ入力します。この端末内にのみ保存されます。</p>
+    </div>
+
+    <button id="btn-login" class="primary-btn">Google でログイン</button>
+    <p id="login-error" class="error" hidden></p>
+  </div>
+</div>
+
+<!-- ===== 設定画面（FR-08：取り込むカレンダーのオン/オフ） ===== -->
+<div id="settings" class="screen" hidden>
+  <header class="topbar">
+    <button class="icon-btn" id="btn-settings-close" aria-label="閉じる">‹</button>
+    <div class="topbar-center"><h1>設定</h1></div>
+    <span class="icon-btn placeholder"></span>
+  </header>
+  <div class="settings-body">
+    <h2 class="section-title">取り込むカレンダー</h2>
+    <div id="calendar-list" class="calendar-list"></div>
+
+    <h2 class="section-title">色ルール</h2>
+    <p class="hint">Phase 1 では <code>js/color-rules.json</code> に直接記述します（FR-19c）。</p>
+    <div id="legend" class="legend"></div>
+
+    <h2 class="section-title">アカウント</h2>
+    <button id="btn-logout" class="secondary-btn">ログアウト</button>
+    <p class="hint" id="build-info"></p>
+  </div>
+</div>
+
+<!-- ===== 予定の全文表示（FR-24：タップで全文を展開） ===== -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-backdrop" data-close="1"></div>
+  <div class="sheet-body">
+    <div id="sheet-time" class="sheet-time"></div>
+    <div id="sheet-note" class="sheet-note"></div>
+    <button class="secondary-btn" data-close="1">閉じる</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

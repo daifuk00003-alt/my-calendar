@@ -1,0 +1,32 @@
+{
+  "_note": "OPEN-02 / OPEN-03 の暫定値。実際の予定タイトルを棚卸しして書き換えること。rules は上から順に評価され、最初に一致した色が採用される（FR-14 先勝ち）。色は最大4色＋未分類グレー（FR-17）。",
+
+  "categories": [
+    { "id": "work",     "label": "仕事",         "color": "#1a73e8" },
+    { "id": "study",    "label": "学習",         "color": "#7b3fe4" },
+    { "id": "family",   "label": "家族",         "color": "#e8710a" },
+    { "id": "private",  "label": "プライベート", "color": "#0f9d58" }
+  ],
+
+  "rules": [
+    { "keyword": "会議",       "category": "work" },
+    { "keyword": "打合せ",     "category": "work" },
+    { "keyword": "MTG",        "category": "work" },
+    { "keyword": "面談",       "category": "work" },
+    { "keyword": "面接",       "category": "work" },
+    { "keyword": "納期",       "category": "work" },
+
+    { "keyword": "勉強",       "category": "study" },
+    { "keyword": "講義",       "category": "study" },
+    { "keyword": "授業",       "category": "study" },
+    { "keyword": "試験",       "category": "study" },
+
+    { "keyword": "家族",       "category": "family" },
+    { "keyword": "実家",       "category": "family" },
+    { "keyword": "通院",       "category": "family" },
+
+    { "keyword": "飲み",       "category": "private" },
+    { "keyword": "旅行",       "category": "private" },
+    { "keyword": "映画",       "category": "private" }
+  ]
+}
