@@ -61,6 +61,48 @@ export async function signIn() {
   });
 }
 
+/**
+ * 画面を出さずにトークンを取り直す。
+ * Google 側のログインが生きていれば通る。ダメなら null を返すだけで、エラーにはしない。
+ */
+export async function trySilentSignIn(timeoutMs = 4000) {
+  if (!getClientId()) return null;
+  let client;
+  try {
+    client = await ensureTokenClient();
+  } catch {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    let settled = false;
+    const timer = setTimeout(() => done(null), timeoutMs);
+
+    client.callback = (res) => {
+      clearTimeout(timer);
+      if (res.error || !res.access_token) return done(null);
+      saveToken(res.access_token, res.expires_in);
+      done(res.access_token);
+    };
+    client.error_callback = () => {
+      clearTimeout(timer);
+      done(null);
+    };
+
+    try {
+      client.requestAccessToken({ prompt: "" }); // 同意画面を出さずに試す
+    } catch {
+      clearTimeout(timer);
+      done(null);
+    }
+  });
+}
+
 export function signOut() {
   const token = getStoredToken();
   clearToken();

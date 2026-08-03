@@ -63,6 +63,19 @@ body { display: flex; flex-direction: column; }
 .icon-btn:active { background: var(--bg-sub); }
 .icon-btn.placeholder { pointer-events: none; }
 
+/* ---------- 再ログインの案内（FR-30） ---------- */
+.reauth {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: #fff4e5; border-bottom: 1px solid #f0d9b5;
+  font-size: 12px; color: #6b4a11; line-height: 1.4;
+}
+.reauth[hidden] { display: none; }
+.reauth button {
+  flex: none; border: none; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer;
+}
+
 /* ---------- 月表示（FR-21, FR-22） ---------- */
 .month-pane {
   flex: var(--month-ratio) 1 0;

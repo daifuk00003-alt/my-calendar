@@ -2,7 +2,7 @@
 // 閲覧専用。入力・編集は Google 公式アプリで行う（3.2 対象外）。
 
 import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
-import { signIn, signOut, getStoredToken } from "./auth.js";
+import { signIn, signOut, getStoredToken, trySilentSignIn } from "./auth.js";
 import { listCalendars, listEvents, createEvent, deleteEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import { textOn, readableOnWhite } from "./colors.js";
@@ -63,14 +63,57 @@ async function boot() {
     showLogin();
     return;
   }
-  if (!getStoredToken()) {
-    showLogin();
+
+  // 前回取得した予定をまず描く（FR-29）。通信を待たずに中身が見える。
+  const hasCache = restoreCache();
+  if (hasCache) {
+    showMain();
+    render();
+  }
+
+  if (getStoredToken()) {
+    if (!hasCache) {
+      showMain();
+      render();
+    }
+    await refresh({ initial: true });
     return;
   }
 
-  showMain();
-  render();
-  await refresh({ initial: true });
+  // 期限切れ。まずは画面を出さずに取り直してみる。
+  const token = await trySilentSignIn();
+  if (token) {
+    if (!hasCache) {
+      showMain();
+      render();
+    }
+    await refresh({ initial: true });
+    return;
+  }
+
+  // 静かな取り直しに失敗。キャッシュがあるなら閲覧は続けられる（FR-30）。
+  if (hasCache) {
+    showReauth(true);
+  } else {
+    showLogin();
+  }
+}
+
+/** 端末に保存した予定を状態へ戻す */
+function restoreCache() {
+  const cache = store.loadCache();
+  if (!cache) return false;
+  state.events = cache.events;
+  state.holidaysByDate = cache.holidays;
+  state.calendars = cache.calendars;
+  state.lastUpdated = cache.savedAt;
+  rebuildIndex();
+  setUpdatedLabel();
+  return state.events.length > 0;
+}
+
+function showReauth(visible) {
+  $("reauth").hidden = !visible;
 }
 
 /* ============================ 画面の切り替え ============================ */
@@ -112,6 +155,7 @@ async function refresh({ initial = false, force = false } = {}) {
   if (!force && !initial && rangeCovered(want, state.loadedRange)) return;
 
   state.loading = true;
+  let retryAfterSilent = false;
   setUpdatedLabel("更新中…");
   try {
     // 手動更新時もカレンダー一覧を取り直す（共有などで増えた分を拾うため）
@@ -144,9 +188,21 @@ async function refresh({ initial = false, force = false } = {}) {
     state.lastUpdated = new Date();
     rebuildIndex();
     render();
+    showReauth(false);
+    store.saveCache({                     // FR-29 次に開いたときすぐ描けるように残す
+      events: state.events,
+      holidays: state.holidaysByDate,
+      calendars: state.calendars,
+      savedAt: state.lastUpdated,
+    });
   } catch (e) {
     if (e instanceof AuthExpiredError) {
-      showLogin("セッションの有効期限が切れました。もう一度ログインしてください。"); // FR-07
+      // 期限切れ。まず静かに取り直し、それでもだめならキャッシュを見せたまま案内する（FR-07 / FR-30）
+      retryAfterSilent = !!(await trySilentSignIn());
+      if (!retryAfterSilent) {
+        if (state.events.length > 0) showReauth(true);
+        else showLogin("セッションの有効期限が切れました。もう一度ログインしてください。");
+      }
       return;
     }
     console.error(e);
@@ -154,6 +210,8 @@ async function refresh({ initial = false, force = false } = {}) {
   } finally {
     state.loading = false;
     setUpdatedLabel();
+    // 静かに取り直せた場合だけ、同じ取得をやり直す
+    if (retryAfterSilent) refresh({ initial, force: true });
   }
 }
 
@@ -781,7 +839,18 @@ function bindEvents() {
 
   $("btn-logout").addEventListener("click", () => {
     signOut();
+    store.clearCache();
     location.reload();
+  });
+
+  $("btn-reauth").addEventListener("click", async () => {
+    try {
+      await signIn();
+      showReauth(false);
+      await refresh({ initial: true, force: true });
+    } catch (e) {
+      toast(e.message);
+    }
   });
 
   $("grid").addEventListener("click", (e) => {

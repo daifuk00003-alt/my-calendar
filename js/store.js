@@ -52,6 +52,35 @@ export function setCalendarEnabled(calendarId, enabled) {
   write(KEY_CALENDARS, prefs);
 }
 
+/* ---- 予定のキャッシュ（FR-29 / FR-30） ---- */
+
+const KEY_CACHE = "mycal.cache";
+
+/** 取得済みの予定を端末に保存する。通信できないときはこれを表示し続ける。 */
+export function saveCache({ events, holidays, calendars, savedAt }) {
+  write(KEY_CACHE, {
+    savedAt: savedAt.toISOString(),
+    calendars,
+    holidays: [...holidays.entries()],
+    events: events.map((e) => ({ ...e, start: e.start.toISOString(), end: e.end.toISOString() })),
+  });
+}
+
+export function loadCache() {
+  const raw = read(KEY_CACHE, null);
+  if (!raw?.events) return null;
+  return {
+    savedAt: new Date(raw.savedAt),
+    calendars: raw.calendars ?? [],
+    holidays: new Map(raw.holidays ?? []),
+    events: raw.events.map((e) => ({ ...e, start: new Date(e.start), end: new Date(e.end) })),
+  };
+}
+
+export function clearCache() {
+  localStorage.removeItem(KEY_CACHE);
+}
+
 /* ---- 表示モード（2週間 / 1ヶ月） ---- */
 
 const KEY_VIEW_MODE = "mycal.viewMode";
