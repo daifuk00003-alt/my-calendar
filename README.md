@@ -160,7 +160,7 @@ my-calendar/
 | 月表示と詳細の分割比率 | `css/style.css` の `--month-ratio` / `--detail-ratio` |
 | 詳細の文字サイズ | `css/style.css` の `.ev-time` / `.ev-note` |
 | バーの最大本数（既定3本） | `js/config.js` の `MAX_BARS` |
-| 詳細にタイトルも出すか | `js/config.js` の `SHOW_TITLE_IN_DETAIL`（既定 `false`＝要件どおり） |
+| 詳細にタイトルを出すか | `js/config.js` の `SHOW_TITLE_IN_DETAIL`（既定 `true`。FR-23 からの変更点） |
 | 先読みする月数 | `js/config.js` の `PREFETCH_MONTHS` |
 
 ---
@@ -177,7 +177,12 @@ my-calendar/
 - OPEN-01 場所を詳細に出さなくて困らないか
 - OPEN-04 終日予定のバー表現（現状は角を立てた四角いバーで暫定的に区別）
 - OPEN-05 ダークモードの要否
-- FR-23 の詳細表示に予定タイトルが含まれていない点（`SHOW_TITLE_IN_DETAIL` で切り替えて比較できます）
+
+### FR-23 からの変更（確定済み）
+
+FR-23 は詳細表示を「開始〜終了時刻」と「メモ」のみと定めていたが、メモのない予定が
+時刻だけの行になり内容を判別できなかったため、**予定タイトルを表示し、それを主役にする**方針に変更した。
+時刻は補助情報として小さく表示する。`SHOW_TITLE_IN_DETAIL` を `false` にすれば元の仕様に戻せる。
 
 ---
 

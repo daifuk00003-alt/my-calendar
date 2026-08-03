@@ -15,9 +15,9 @@ export const PREFETCH_MONTHS = 1;
 // FR-21 月表示の1マスに描くバーの最大本数（Phase 1 の検証で見直す対象）
 export const MAX_BARS = 3;
 
-// FR-23 は「開始〜終了時刻」と「メモ」のみを規定しており、タイトルは含まれていない。
-// Phase 1 の実運用でタイトルなしが不便だった場合は true にして比較する。
-export const SHOW_TITLE_IN_DETAIL = false;
+// FR-23 は「開始〜終了時刻」と「メモ」のみを規定していたが、実際に描画すると
+// メモのない予定が時刻だけの行になり内容を判別できなかったため、タイトルを主役にする方針へ変更。
+export const SHOW_TITLE_IN_DETAIL = true;
 
 const CLIENT_ID_KEY = "mycal.clientId";
 

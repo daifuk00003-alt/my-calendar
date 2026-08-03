@@ -361,6 +361,7 @@ function openInGoogle(ev) {
 
 function openSheet(ev) {
   $("sheet-time").textContent = timeRangeLabel(ev, state.selectedDate);
+  $("sheet-title").textContent = ev.title;
   $("sheet-note").textContent = ev.description;
   $("sheet").hidden = false;
 }
