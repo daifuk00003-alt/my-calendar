@@ -534,7 +534,8 @@ function openCompose() {
   form.reset();
   $("compose-error").hidden = true;
 
-  $("c-date").value = dateKey(state.selectedDate);
+  // 日付は月表示で選んでいる日。入力欄は置かず、見出しで示す。
+  $("compose-title").textContent = `${detailDateLabel(state.selectedDate)} に追加`;
 
   // 開始時刻は「次のキリのよい時刻」
   const now = new Date();
@@ -627,14 +628,13 @@ async function submitCompose(e) {
     title: composeTitle(),
     description: $("c-note").value.trim(),
     allDay: $("c-allday").checked,
-    date: $("c-date").value,
+    date: dateKey(state.selectedDate),
     startTime: $("c-start").value,
     endTime: computeEndTime(),
   };
 
   if (!composeCategory) return showComposeError("種類（色）を選んでください。");
   if (!$("c-title").value.trim()) return showComposeError("予定名を入力してください。");
-  if (!input.date) return showComposeError("日付を入力してください。");
   if (!input.allDay) {
     if (!input.startTime) return showComposeError("開始時刻を入力してください。");
     if (input.endTime <= input.startTime) return showComposeError("開始が遅すぎます。時刻を見直してください。");
