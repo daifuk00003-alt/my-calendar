@@ -12,9 +12,9 @@
   --gray: #9aa0a6;          /* FR-15 未分類 */
   --accent: #1a73e8;
 
-  /* FR-20 上下分割比率。Phase 1 の検証で見直す対象。 */
-  --month-ratio: 52;
-  --detail-ratio: 48;
+  /* FR-20 上下分割比率。月表示に文字を入れたぶん上を厚くしている。 */
+  --month-ratio: 64;
+  --detail-ratio: 36;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -60,6 +60,8 @@ body { display: flex; flex-direction: column; }
   flex: var(--month-ratio) 1 0;
   display: flex; flex-direction: column;
   position: relative; overflow: hidden;
+  /* 画面が低いときは1マスを詰めてでも6週すべてを描く（週が消える方が困るため） */
+  min-height: 0;
   touch-action: pan-y;
   user-select: none;
 }
@@ -69,10 +71,10 @@ body { display: flex; flex-direction: column; }
 .wd.sat { color: var(--blue); }
 
 .grid {
-  flex: 1;
+  flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
+  grid-template-rows: repeat(6, minmax(0, 1fr));
   border-top: 1px solid var(--line);
 }
 .cell {
@@ -91,7 +93,7 @@ body { display: flex; flex-direction: column; }
   border-radius: 999px; padding: 0 5px;
 }
 .daynum {
-  font-size: 12px; line-height: 18px; height: 18px;
+  font-size: 12px; line-height: 16px; height: 16px;
   align-self: flex-start; font-variant-numeric: tabular-nums;
 }
 .daynum.sun, .daynum.holiday { color: var(--red); }   /* FR-09 祝日は数字を赤 */
@@ -100,10 +102,18 @@ body { display: flex; flex-direction: column; }
 .cell.today .daynum.holiday,
 .cell.today .daynum.sat { color: #fff; }
 
-.bars { display: flex; flex-direction: column; gap: 2px; padding-bottom: 2px; }
-.bar { height: 5px; border-radius: 3px; }                    /* FR-22 文字は載せない */
+.bars { display: flex; flex-direction: column; gap: 2px; padding-bottom: 2px; min-height: 0; overflow: hidden; }
+.bar { height: 5px; border-radius: 3px; }
 .bar.allday { border-radius: 1px; }                          /* OPEN-04 暫定：終日は角を立てて区別 */
-.more { font-size: 9px; color: var(--text-sub); line-height: 10px; }
+.more { font-size: 10px; color: var(--text-sub); line-height: 12px; }
+
+/* 月表示のマスに予定名を載せる場合（FR-22 からの変更） */
+.grid.with-text .bar {
+  height: auto; min-height: 14px; flex: none;
+  padding: 0 3px;
+  color: #fff; font-size: 11px; font-weight: 600; line-height: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* 引っ張って更新（FR-04） */
 .pull-indicator {

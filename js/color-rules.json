@@ -2,10 +2,10 @@
   "_note": "OPEN-02 / OPEN-03 の暫定値。実際の予定タイトルを棚卸しして書き換えること。rules は上から順に評価され、最初に一致した色が採用される（FR-14 先勝ち）。色は最大4色＋未分類グレー（FR-17）。",
 
   "categories": [
-    { "id": "work",     "label": "仕事",         "color": "#1a73e8" },
-    { "id": "study",    "label": "学習",         "color": "#7b3fe4" },
-    { "id": "family",   "label": "家族",         "color": "#e8710a" },
-    { "id": "private",  "label": "プライベート", "color": "#0f9d58" }
+    { "id": "work",     "label": "仕事",         "color": "#1a56db" },
+    { "id": "study",    "label": "学習",         "color": "#6d28d9" },
+    { "id": "family",   "label": "家族",         "color": "#b45309" },
+    { "id": "private",  "label": "プライベート", "color": "#047857" }
   ],
 
   "rules": [

@@ -1,7 +1,7 @@
 // 自作カレンダーアプリ Phase 1
 // 閲覧専用。入力・編集は Google 公式アプリで行う（3.2 対象外）。
 
-import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, getClientId, setClientId } from "./config.js";
+import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
 import { signIn, signOut, getStoredToken } from "./auth.js";
 import { listCalendars, listEvents, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
@@ -195,6 +195,7 @@ function renderMonth() {
   $("month-label").textContent = monthLabel(state.viewMonth);
 
   const grid = $("grid");
+  grid.classList.toggle("with-text", SHOW_TITLE_IN_MONTH);
   const frag = document.createDocumentFragment();
   const first = startOfGrid(state.viewMonth);
   const today = startOfDay(new Date());
@@ -226,7 +227,8 @@ function renderMonth() {
       const bar = document.createElement("div");
       bar.className = ev.allDay ? "bar allday" : "bar";  // OPEN-04 暫定
       bar.style.background = ev.color.color;
-      bars.appendChild(bar);                              // FR-22 文字は載せない
+      if (SHOW_TITLE_IN_MONTH) bar.textContent = ev.title;
+      bars.appendChild(bar);
     });
     if (events.length > MAX_BARS) {
       const more = document.createElement("div");
@@ -305,7 +307,9 @@ function renderDetail() {
     frag.appendChild(row);
   }
   list.replaceChildren(frag);
+  // ブラウザが再読み込み時にスクロール位置を復元してくるため、次フレームでも先頭に戻す
   list.scrollTop = 0;
+  requestAnimationFrame(() => (list.scrollTop = 0));
 }
 
 function renderLegend() {

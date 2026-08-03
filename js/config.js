@@ -15,6 +15,11 @@ export const PREFETCH_MONTHS = 1;
 // FR-21 月表示の1マスに描くバーの最大本数（Phase 1 の検証で見直す対象）
 export const MAX_BARS = 3;
 
+// FR-22 は月表示のバーに文字を載せないと定めていたが、実運用で「マスの中でも
+// 内容が少し分かる方がよい」と判断したため、バーにタイトルを載せる。
+// false にすると元の細い色バー（文字なし）に戻る。
+export const SHOW_TITLE_IN_MONTH = true;
+
 // FR-23 は「開始〜終了時刻」と「メモ」のみを規定していたが、実際に描画すると
 // メモのない予定が時刻だけの行になり内容を判別できなかったため、タイトルを主役にする方針へ変更。
 export const SHOW_TITLE_IN_DETAIL = true;

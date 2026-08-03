@@ -1,7 +1,7 @@
 // 色分けロジック（本アプリの中核）FR-10〜FR-17
 // 判定はすべて端末内で行う。通信も再取得も伴わないため、ルール変更は即座に反映される（FR-19b）。
 
-export const UNCLASSIFIED = { id: null, label: "未分類", color: "#9aa0a6" }; // FR-15
+export const UNCLASSIFIED = { id: null, label: "未分類", color: "#6b7280" }; // FR-15
 
 const MAX_COLORS = 4; // FR-17
 
