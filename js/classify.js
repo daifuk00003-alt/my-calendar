@@ -26,7 +26,8 @@ export function createClassifier(ruleSet) {
   }
 
   const rules = (ruleSet?.rules ?? [])
-    .map((r) => ({ ...r, needle: normalize(r.keyword) }))
+    // 【 】で囲んだキーワードは「本人が明示的に付けた印」とみなす
+    .map((r) => ({ ...r, needle: normalize(r.keyword), explicit: /^【.+】$/.test(r.keyword.trim()) }))
     .filter((r) => {
       if (!r.needle) return false;
       if (!byId.has(r.category)) {
@@ -59,7 +60,8 @@ export function createClassifier(ruleSet) {
       color: category.color,
       label: category.label,
       categoryId: category.id,
-      duplicate: matched.length >= 2,      // FR-16 重複ヒット印
+      // FR-16 重複ヒット印。ただし明示的な印が先頭なら、それが答えなので曖昧ではない
+      duplicate: matched.length >= 2 && !matched[0].explicit,
       matched: matched.map((r) => r.keyword),
     };
   }

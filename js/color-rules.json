@@ -9,6 +9,11 @@
   ],
 
   "rules": [
+    { "keyword": "【仕事】",       "category": "work" },
+    { "keyword": "【学習】",       "category": "study" },
+    { "keyword": "【家族】",       "category": "family" },
+    { "keyword": "【プライベート】", "category": "private" },
+
     { "keyword": "会議",       "category": "work" },
     { "keyword": "打合せ",     "category": "work" },
     { "keyword": "MTG",        "category": "work" },

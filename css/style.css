@@ -245,6 +245,17 @@ body { display: flex; flex-direction: column; }
 .field-row { display: flex; gap: 12px; }
 .field-col { flex: 1; min-width: 0; }
 .field-row[hidden] { display: none; }
+#c-times[hidden] { display: none; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.chip {
+  padding: 9px 14px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: none; color: var(--text);
+  font-size: 14px; font-weight: 600; cursor: pointer; line-height: 1.2;
+}
+.chip.selected { color: #fff; }
+.chip.plain.selected { background: var(--accent); border-color: var(--accent); }
+.end-label { color: var(--text-sub); font-weight: 400; }
 textarea.field { resize: vertical; font-family: inherit; }
 select.field { appearance: none; background: var(--bg); }
 .compose-actions { display: flex; gap: 12px; margin-top: 8px; }

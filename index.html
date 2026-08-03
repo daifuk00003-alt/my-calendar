@@ -57,8 +57,11 @@
   <form id="compose-form" class="sheet-body" autocomplete="off">
     <h2 class="compose-title">予定を追加</h2>
 
+    <label class="field-label">種類（色）</label>
+    <div id="c-colors" class="chip-row"></div>
+
     <label class="field-label" for="c-title">予定名</label>
-    <input id="c-title" class="field" type="text" required placeholder="例：【仕事】定例ミーティング">
+    <input id="c-title" class="field" type="text" required placeholder="例：定例ミーティング">
 
     <label class="check-row">
       <input id="c-allday" type="checkbox"> <span>終日</span>
@@ -67,22 +70,16 @@
     <label class="field-label" for="c-date">日付</label>
     <input id="c-date" class="field" type="date" required>
 
-    <div id="c-times" class="field-row">
-      <div class="field-col">
-        <label class="field-label" for="c-start">開始</label>
-        <input id="c-start" class="field" type="time" step="300">
-      </div>
-      <div class="field-col">
-        <label class="field-label" for="c-end">終了</label>
-        <input id="c-end" class="field" type="time" step="300">
-      </div>
+    <div id="c-times">
+      <label class="field-label" for="c-start">開始</label>
+      <input id="c-start" class="field" type="time" step="900">
+
+      <label class="field-label">長さ <span id="c-endlabel" class="end-label"></span></label>
+      <div id="c-durations" class="chip-row"></div>
     </div>
 
     <label class="field-label" for="c-note">メモ</label>
-    <textarea id="c-note" class="field" rows="3" placeholder="任意"></textarea>
-
-    <label class="field-label" for="c-calendar">追加先のカレンダー</label>
-    <select id="c-calendar" class="field"></select>
+    <textarea id="c-note" class="field" rows="3" placeholder="内容・持ち物・場所など"></textarea>
 
     <p id="compose-error" class="error" hidden></p>
 

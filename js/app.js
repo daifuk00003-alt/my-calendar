@@ -510,6 +510,24 @@ async function confirmDelete(ev) {
 
 /* ============================ 予定の追加 ============================ */
 
+const DURATIONS = [
+  { minutes: 30, label: "30分" },
+  { minutes: 60, label: "1時間" },
+  { minutes: 90, label: "1時間半" },
+  { minutes: 120, label: "2時間" },
+  { minutes: 180, label: "3時間" },
+];
+
+let composeCategory = null; // null は「自動」（キーワード判定にまかせる）
+let composeDuration = 60;
+
+/** 予定を追加するカレンダー。書き込めるものを優先し、なければメイン。 */
+function targetCalendarId() {
+  const writable = state.calendars.filter((c) => c.writable);
+  const pick = writable.find((c) => c.primary) ?? writable[0] ?? state.calendars.find((c) => c.primary);
+  return pick?.id ?? "primary";
+}
+
 /** 選択中の日を初期値にしてフォームを開く */
 function openCompose() {
   const form = $("compose-form");
@@ -518,32 +536,78 @@ function openCompose() {
 
   $("c-date").value = dateKey(state.selectedDate);
 
-  // 開始時刻は「次のキリのよい時刻」、終了はその1時間後
+  // 開始時刻は「次のキリのよい時刻」
   const now = new Date();
   const start = new Date(state.selectedDate);
   start.setHours(isSameDay(state.selectedDate, now) ? now.getHours() + 1 : 10, 0, 0, 0);
   $("c-start").value = hhmm(start);
-  $("c-end").value = hhmm(new Date(start.getTime() + 60 * 60_000));
 
-  const writable = state.calendars.filter((c) => c.writable);
-  const options = (writable.length ? writable : state.calendars).map((cal) => {
-    const opt = document.createElement("option");
-    opt.value = cal.id;
-    opt.textContent = cal.name;
-    if (cal.primary) opt.selected = true;
-    return opt;
-  });
-  if (options.length === 0) {
-    const opt = document.createElement("option");
-    opt.value = "primary";
-    opt.textContent = "メインのカレンダー";
-    options.push(opt);
-  }
-  $("c-calendar").replaceChildren(...options);
+  composeCategory = null;
+  composeDuration = 60;
+  renderComposeChips();
 
   syncAllDay();
   $("compose").hidden = false;
-  $("c-title").focus();
+  // preventScroll を付けないと、フォーム上部（見出し）が隠れる位置までスクロールしてしまう
+  $("c-title").focus({ preventScroll: true });
+  $("compose-form").scrollTop = 0;
+}
+
+function renderComposeChips() {
+  // 種類（色）
+  const categories = [{ id: null, label: "自動", color: null }, ...state.classify.categories];
+  const colorChips = categories.map((cat) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = cat.label;
+    const selected = composeCategory === cat.id;
+    if (selected) chip.classList.add("selected");
+    if (cat.color) {
+      chip.style.borderColor = cat.color;
+      chip.style.color = selected ? "#fff" : cat.color;
+      chip.style.background = selected ? cat.color : "none";
+    } else {
+      chip.classList.add("plain");
+    }
+    chip.addEventListener("click", () => {
+      composeCategory = cat.id;
+      renderComposeChips();
+    });
+    return chip;
+  });
+  $("c-colors").replaceChildren(...colorChips);
+
+  // 長さ
+  const durationChips = DURATIONS.map((d) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip plain" + (composeDuration === d.minutes ? " selected" : "");
+    chip.textContent = d.label;
+    chip.addEventListener("click", () => {
+      composeDuration = d.minutes;
+      renderComposeChips();
+    });
+    return chip;
+  });
+  $("c-durations").replaceChildren(...durationChips);
+
+  updateEndLabel();
+}
+
+function updateEndLabel() {
+  const end = computeEndTime();
+  $("c-endlabel").textContent = end ? `→ ${end} に終わる` : "";
+}
+
+/** 開始時刻 + 長さ から終了時刻を出す（日をまたぐ場合は 23:59 で止める） */
+function computeEndTime() {
+  const value = $("c-start").value;
+  if (!value) return "";
+  const [h, m] = value.split(":").map(Number);
+  const total = h * 60 + m + composeDuration;
+  if (total >= 24 * 60) return "23:59";
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function closeCompose() {
@@ -565,19 +629,19 @@ async function submitCompose(e) {
   err.hidden = true;
 
   const input = {
-    title: $("c-title").value.trim(),
+    title: composeTitle(),
     description: $("c-note").value.trim(),
     allDay: $("c-allday").checked,
     date: $("c-date").value,
     startTime: $("c-start").value,
-    endTime: $("c-end").value,
+    endTime: computeEndTime(),
   };
 
-  if (!input.title) return showComposeError("予定名を入力してください。");
+  if (!$("c-title").value.trim()) return showComposeError("予定名を入力してください。");
   if (!input.date) return showComposeError("日付を入力してください。");
   if (!input.allDay) {
-    if (!input.startTime || !input.endTime) return showComposeError("開始と終了の時刻を入力してください。");
-    if (input.endTime <= input.startTime) return showComposeError("終了時刻は開始時刻より後にしてください。");
+    if (!input.startTime) return showComposeError("開始時刻を入力してください。");
+    if (input.endTime <= input.startTime) return showComposeError("開始が遅すぎます。時刻を見直してください。");
   }
 
   if (state.demo) {
@@ -589,7 +653,7 @@ async function submitCompose(e) {
   submit.disabled = true;
   submit.textContent = "追加中…";
   try {
-    await createEvent($("c-calendar").value, input);
+    await createEvent(targetCalendarId(), input);
     closeCompose();
     // 選択日を追加した日に合わせてから取り直す
     selectDate(input.date);
@@ -606,6 +670,20 @@ async function submitCompose(e) {
     submit.disabled = false;
     submit.textContent = "追加";
   }
+}
+
+/**
+ * 選んだ種類を予定名の先頭に【 】として付ける。
+ * 色の判定はタイトルで行うため（FR-11）、色を残すには予定名に印が要る。
+ * 「自動」を選んだ場合や、すでに同じ印が付いている場合は何もしない。
+ */
+function composeTitle() {
+  const title = $("c-title").value.trim();
+  if (!composeCategory) return title;
+  const category = state.classify.categories.find((c) => c.id === composeCategory);
+  if (!category) return title;
+  const tag = `【${category.label}】`;
+  return title.startsWith(tag) ? title : tag + title;
 }
 
 function showComposeError(message) {
@@ -676,6 +754,7 @@ function bindEvents() {
     if (e.target.dataset.composeClose) closeCompose();
   });
   $("c-allday").addEventListener("change", syncAllDay);
+  $("c-start").addEventListener("input", updateEndLabel);
   $("compose-form").addEventListener("submit", submitCompose);
 
   $("btn-login").addEventListener("click", onLogin);
