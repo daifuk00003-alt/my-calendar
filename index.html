@@ -22,7 +22,10 @@
     <button class="icon-btn" id="btn-prev" aria-label="前の月">‹</button>
     <div class="topbar-center">
       <h1 id="month-label">—</h1>
-      <span id="updated-at" class="updated-at"></span>
+      <div class="view-toggle" id="view-toggle">
+        <button type="button" data-mode="2weeks">2週間</button>
+        <button type="button" data-mode="month">1ヶ月</button>
+      </div>
     </div>
     <button class="icon-btn" id="btn-next" aria-label="次の月">›</button>
     <button class="icon-btn" id="btn-settings" aria-label="設定">☰</button>
@@ -119,7 +122,7 @@
 
     <h2 class="section-title">アカウント</h2>
     <button id="btn-logout" class="secondary-btn">ログアウト</button>
-    <p class="hint" id="build-info"></p>
+    <p class="hint" id="updated-at"></p>
   </div>
 </div>
 

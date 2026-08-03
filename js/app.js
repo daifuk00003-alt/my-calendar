@@ -1,7 +1,7 @@
 // 自作カレンダーアプリ Phase 1
 // 閲覧専用。入力・編集は Google 公式アプリで行う（3.2 対象外）。
 
-import { MAX_BARS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
+import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
 import { signIn, signOut, getStoredToken } from "./auth.js";
 import { listCalendars, listEvents, createEvent, deleteEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
@@ -9,14 +9,16 @@ import { textOn, readableOnWhite } from "./colors.js";
 import * as store from "./store.js";
 import { demoEvents, demoHolidays } from "./demo.js";
 import {
-  startOfDay, startOfMonth, addMonths, addDays, startOfGrid,
-  dateKey, isSameDay, monthLabel, detailDateLabel, timeRangeLabel, timeLabel,
+  startOfDay, startOfMonth, addMonths, addDays, startOfGrid, startOfWeek,
+  dateKey, isSameDay, monthLabel, rangeLabel, detailDateLabel, timeRangeLabel, timeLabel,
 } from "./dates.js";
 
 const $ = (id) => document.getElementById(id);
 
 const state = {
+  viewMode: store.loadViewMode(),        // "2weeks" | "month"
   viewMonth: startOfMonth(new Date()),
+  weekStart: startOfWeek(new Date()),    // 2週間表示の左上の日
   selectedDate: startOfDay(new Date()), // FR-28 起動時は当日
   classify: null,
   calendars: [],
@@ -202,18 +204,35 @@ function render() {
   renderDetail();
 }
 
+/** いま描く範囲（左上の日と週数） */
+function visibleGrid() {
+  if (state.viewMode === "2weeks") {
+    return { first: state.weekStart, weeks: 2 };
+  }
+  // 月表示は、その月が占める週数だけ描く（4〜6週）
+  const daysInMonth = new Date(state.viewMonth.getFullYear(), state.viewMonth.getMonth() + 1, 0).getDate();
+  return {
+    first: startOfGrid(state.viewMonth),
+    weeks: Math.ceil((state.viewMonth.getDay() + daysInMonth) / 7),
+  };
+}
+
 function renderMonth() {
-  $("month-label").textContent = monthLabel(state.viewMonth);
+  const { first, weeks } = visibleGrid();
+
+  $("month-label").textContent =
+    state.viewMode === "2weeks" ? rangeLabel(first, addDays(first, 13)) : monthLabel(state.viewMonth);
+
+  for (const button of $("view-toggle").children) {
+    button.classList.toggle("selected", button.dataset.mode === state.viewMode);
+  }
 
   const grid = $("grid");
   grid.classList.toggle("with-text", SHOW_TITLE_IN_MONTH);
   const frag = document.createDocumentFragment();
-  const first = startOfGrid(state.viewMonth);
   const today = startOfDay(new Date());
+  const maxBars = state.viewMode === "2weeks" ? MAX_BARS_2WEEKS : MAX_BARS;
 
-  // その月が占める週数だけ描く（4〜6週）。余った行を作らないぶん1マスを高くできる。
-  const daysInMonth = new Date(state.viewMonth.getFullYear(), state.viewMonth.getMonth() + 1, 0).getDate();
-  const weeks = Math.ceil((state.viewMonth.getDay() + daysInMonth) / 7);
   grid.style.setProperty("--rows", weeks);
 
   for (let i = 0; i < weeks * 7; i++) {
@@ -225,7 +244,9 @@ function renderMonth() {
     const cell = document.createElement("div");
     cell.className = "cell";
     cell.dataset.date = key;
-    if (day.getMonth() !== state.viewMonth.getMonth()) cell.classList.add("other-month");
+    if (state.viewMode === "month" && day.getMonth() !== state.viewMonth.getMonth()) {
+      cell.classList.add("other-month");
+    }
     if (isSameDay(day, today)) cell.classList.add("today");
     if (isSameDay(day, state.selectedDate)) cell.classList.add("selected");
 
@@ -239,7 +260,7 @@ function renderMonth() {
 
     const bars = document.createElement("div");
     bars.className = "bars";
-    events.slice(0, MAX_BARS).forEach((ev) => {          // FR-21 最大3本
+    events.slice(0, maxBars).forEach((ev) => {           // FR-21 本数の上限
       const bar = document.createElement("div");
       bar.className = ev.allDay ? "bar allday" : "bar";  // OPEN-04 暫定
       bar.style.background = ev.color.color;
@@ -249,10 +270,10 @@ function renderMonth() {
       }
       bars.appendChild(bar);
     });
-    if (events.length > MAX_BARS) {
+    if (events.length > maxBars) {
       const more = document.createElement("div");
       more.className = "more";
-      more.textContent = `+${events.length - MAX_BARS}`;  // FR-21 超過分
+      more.textContent = `+${events.length - maxBars}`;   // FR-21 超過分
       bars.appendChild(more);
     }
     cell.appendChild(bars);
@@ -385,18 +406,43 @@ function setUpdatedLabel(text) {
 
 /* ============================ 操作 ============================ */
 
-function goMonth(delta) {
-  state.viewMonth = addMonths(state.viewMonth, delta);
+/** 前後へ移動。月表示なら1ヶ月、2週間表示なら2週間ずつ。 */
+function goPage(delta) {
+  if (state.viewMode === "2weeks") {
+    state.weekStart = addDays(state.weekStart, delta * 14);
+    state.viewMonth = startOfMonth(state.weekStart);
+  } else {
+    state.viewMonth = addMonths(state.viewMonth, delta);
+  }
   // 先読み済みの範囲から即座に描画する（NFR-03）
   render();
   refresh(); // 範囲が足りなければ裏で取得
 }
 
+function setViewMode(mode) {
+  if (mode === state.viewMode) return;
+  state.viewMode = mode;
+  store.saveViewMode(mode);
+  // いま選んでいる日が見えるように合わせる
+  state.weekStart = startOfWeek(state.selectedDate);
+  state.viewMonth = startOfMonth(state.selectedDate);
+  render();
+  refresh();
+}
+
 function selectDate(key) {
   const [y, m, d] = key.split("-").map(Number);
   state.selectedDate = new Date(y, m - 1, d);
-  if (state.selectedDate.getMonth() !== state.viewMonth.getMonth() ||
-      state.selectedDate.getFullYear() !== state.viewMonth.getFullYear()) {
+
+  const { first, weeks } = visibleGrid();
+  const outOfView =
+    state.viewMode === "2weeks"
+      ? state.selectedDate < first || state.selectedDate >= addDays(first, weeks * 7)
+      : state.selectedDate.getMonth() !== state.viewMonth.getMonth() ||
+        state.selectedDate.getFullYear() !== state.viewMonth.getFullYear();
+
+  if (outOfView) {
+    state.weekStart = startOfWeek(state.selectedDate);
     state.viewMonth = startOfMonth(state.selectedDate);
     refresh();
   }
@@ -724,8 +770,12 @@ function openSettings() {
 /* ============================ イベント登録 ============================ */
 
 function bindEvents() {
-  $("btn-prev").addEventListener("click", () => goMonth(-1));
-  $("btn-next").addEventListener("click", () => goMonth(1));
+  $("btn-prev").addEventListener("click", () => goPage(-1));
+  $("btn-next").addEventListener("click", () => goPage(1));
+  $("view-toggle").addEventListener("click", (e) => {
+    const mode = e.target.dataset?.mode;
+    if (mode) setViewMode(mode);
+  });
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-settings-close").addEventListener("click", showMain);
 
@@ -824,7 +874,7 @@ function bindGestures() {
     const dx = (e.changedTouches[0]?.clientX ?? x0) - x0;
     indicator.classList.remove("visible");
     if (axis === "x" && Math.abs(dx) > SWIPE) {
-      goMonth(dx < 0 ? 1 : -1);
+      goPage(dx < 0 ? 1 : -1);
     } else if (pulling) {
       refresh({ force: true });
     }

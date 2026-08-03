@@ -52,6 +52,19 @@ export function setCalendarEnabled(calendarId, enabled) {
   write(KEY_CALENDARS, prefs);
 }
 
+/* ---- 表示モード（2週間 / 1ヶ月） ---- */
+
+const KEY_VIEW_MODE = "mycal.viewMode";
+
+export function loadViewMode() {
+  const value = localStorage.getItem(KEY_VIEW_MODE);
+  return value === "month" ? "month" : "2weeks"; // 既定は2週間
+}
+
+export function saveViewMode(mode) {
+  localStorage.setItem(KEY_VIEW_MODE, mode);
+}
+
 /** 未設定のカレンダーは既定でオン */
 export function isCalendarEnabled(calendarId, prefs = loadCalendarPrefs()) {
   return prefs[calendarId] !== false;

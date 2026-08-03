@@ -35,6 +35,16 @@ export function monthLabel(d) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月`;
 }
 
+/** その日を含む週の日曜 */
+export function startOfWeek(d) {
+  return addDays(startOfDay(d), -d.getDay());
+}
+
+/** 2週間表示の見出し（例：8月2日 - 8月15日） */
+export function rangeLabel(from, to) {
+  return `${from.getMonth() + 1}月${from.getDate()}日 - ${to.getMonth() + 1}月${to.getDate()}日`;
+}
+
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 
 export function detailDateLabel(d) {

@@ -45,7 +45,15 @@ body { display: flex; flex-direction: column; }
 }
 .topbar-center { flex: 1; text-align: center; min-width: 0; }
 .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: .02em; }
-.updated-at { display: block; font-size: 10px; color: var(--text-sub); line-height: 1.4; }
+.view-toggle {
+  display: inline-flex; margin-top: 3px;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+}
+.view-toggle button {
+  border: none; background: none; color: var(--text-sub);
+  font-size: 11px; font-weight: 600; padding: 3px 12px; cursor: pointer;
+}
+.view-toggle button.selected { background: var(--accent); color: #fff; }
 .icon-btn {
   flex: none; width: 40px; height: 40px;
   border: none; background: none; color: var(--text);
