@@ -3,7 +3,9 @@
 
 export const UNCLASSIFIED = { id: null, label: "未分類", color: "#6b7280" }; // FR-15
 
-const MAX_COLORS = 4; // FR-17
+// FR-17 は4色までとしていたが、種類を必要なだけ作る方針に変更した。
+// ここは上限ではなく「これを超えると凡例なしでは見分けにくい」という目安。
+const MAX_COLORS = 8;
 
 /** FR-13 全角/半角・英大文字/小文字を同一視する正規化 */
 export function normalize(s) {
@@ -21,7 +23,7 @@ export function createClassifier(ruleSet) {
   const colors = new Set(categories.map((c) => c.color));
   if (colors.size > MAX_COLORS) {
     console.warn(
-      `[color-rules] 色数が ${colors.size} 色です。FR-17 の上限は ${MAX_COLORS} 色＋未分類グレーです。`
+      `[color-rules] 色数が ${colors.size} 色あります。${MAX_COLORS} 色を超えると、凡例なしで見分けるのが難しくなります。`
     );
   }
 

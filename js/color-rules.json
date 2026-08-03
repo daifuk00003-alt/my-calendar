@@ -1,37 +1,23 @@
 {
-  "_note": "OPEN-02 / OPEN-03 の暫定値。実際の予定タイトルを棚卸しして書き換えること。rules は上から順に評価され、最初に一致した色が採用される（FR-14 先勝ち）。色は最大4色＋未分類グレー（FR-17）。",
+  "_note": "categories の並び順が、追加フォームの種類ボタンの並び順になる。rules は上から順に評価され、最初に一致した色が採用される（FR-14 先勝ち）。【 】で囲んだキーワードは本人が付けた印として扱い、重複ヒット印（●）を出さない。",
 
   "categories": [
-    { "id": "work",     "label": "仕事",         "color": "#1a56db" },
-    { "id": "study",    "label": "学習",         "color": "#6d28d9" },
-    { "id": "family",   "label": "家族",         "color": "#b45309" },
-    { "id": "private",  "label": "プライベート", "color": "#047857" }
+    { "id": "metsa",   "label": "メッツア",   "color": "#047857" },
+    { "id": "kohaku",  "label": "琥珀",       "color": "#c2410c" },
+    { "id": "reysol",  "label": "柏レイソル", "color": "#a16207" },
+    { "id": "asobi",   "label": "遊び",       "color": "#be185d" },
+    { "id": "study",   "label": "学習",       "color": "#6d28d9" },
+    { "id": "anything","label": "なんでも",   "color": "#b91c1c" },
+    { "id": "aiplus",  "label": "AIプラス",   "color": "#1d4ed8" }
   ],
 
   "rules": [
-    { "keyword": "【仕事】",       "category": "work" },
+    { "keyword": "【メッツア】",   "category": "metsa" },
+    { "keyword": "【琥珀】",       "category": "kohaku" },
+    { "keyword": "【柏レイソル】", "category": "reysol" },
+    { "keyword": "【遊び】",       "category": "asobi" },
     { "keyword": "【学習】",       "category": "study" },
-    { "keyword": "【家族】",       "category": "family" },
-    { "keyword": "【プライベート】", "category": "private" },
-
-    { "keyword": "会議",       "category": "work" },
-    { "keyword": "打合せ",     "category": "work" },
-    { "keyword": "MTG",        "category": "work" },
-    { "keyword": "面談",       "category": "work" },
-    { "keyword": "面接",       "category": "work" },
-    { "keyword": "納期",       "category": "work" },
-
-    { "keyword": "勉強",       "category": "study" },
-    { "keyword": "講義",       "category": "study" },
-    { "keyword": "授業",       "category": "study" },
-    { "keyword": "試験",       "category": "study" },
-
-    { "keyword": "家族",       "category": "family" },
-    { "keyword": "実家",       "category": "family" },
-    { "keyword": "通院",       "category": "family" },
-
-    { "keyword": "飲み",       "category": "private" },
-    { "keyword": "旅行",       "category": "private" },
-    { "keyword": "映画",       "category": "private" }
+    { "keyword": "【なんでも】",   "category": "anything" },
+    { "keyword": "【AIプラス】",   "category": "aiplus" }
   ]
 }
