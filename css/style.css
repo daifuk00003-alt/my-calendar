@@ -160,6 +160,7 @@ body { display: flex; flex-direction: column; }
 }
 .detail-head h2 { margin: 0; font-size: 20px; font-weight: 700; }
 .holiday-name { font-size: 13px; color: var(--red); }
+.updated-at { margin-left: auto; font-size: 11px; color: var(--text-sub); white-space: nowrap; }
 
 .detail-list {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;

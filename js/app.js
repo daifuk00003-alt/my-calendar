@@ -3,7 +3,7 @@
 
 import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getClientId, setClientId } from "./config.js";
 import { signIn, signOut, getStoredToken, trySilentSignIn } from "./auth.js";
-import { listCalendars, listEvents, createEvent, deleteEvent, AuthExpiredError } from "./api.js";
+import { listCalendars, listEvents, createEvent, updateEvent, deleteEvent, AuthExpiredError } from "./api.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import { textOn, readableOnWhite } from "./colors.js";
 import * as store from "./store.js";
@@ -423,7 +423,7 @@ function renderDetail() {
         closeSwipe();
         return;
       }
-      openInGoogle(ev);                                          // FR-26
+      openCompose(ev);                    // タップで編集（FR-26 の外部遷移はやめた）
     });
 
     wrap.append(actions, row);
@@ -505,11 +505,6 @@ function selectDate(key) {
     refresh();
   }
   render();
-}
-
-function openInGoogle(ev) {
-  if (!ev.htmlLink) return;
-  window.open(ev.htmlLink, "_blank", "noopener");
 }
 
 function openSheet(ev) {
@@ -628,7 +623,8 @@ async function confirmDelete(ev) {
 
 /* ============================ 予定の追加 ============================ */
 
-let composeCategory = null; // 種類は必ず選ばせるので、初期状態は未選択
+let composeCategory = null;  // 種類は必ず選ばせるので、初期状態は未選択
+let editingEvent = null;     // 編集中の予定。null なら新規追加。
 
 /** 予定を追加するカレンダー。書き込めるものを優先し、なければメイン。 */
 function targetCalendarId() {
@@ -637,27 +633,48 @@ function targetCalendarId() {
   return pick?.id ?? "primary";
 }
 
-/** 選択中の日を初期値にしてフォームを開く */
-function openCompose() {
+/** 複数日にまたがる予定は、この画面では時刻を扱わない */
+function isMultiDay(ev) {
+  return !isSameDay(ev.start, ev.allDay ? addDays(ev.end, -1) : ev.end);
+}
+
+/**
+ * フォームを開く。予定を渡すと編集、渡さなければ選択中の日への追加。
+ * @param {object|null} ev
+ */
+function openCompose(ev = null) {
   const form = $("compose-form");
   form.reset();
   $("compose-error").hidden = true;
+  editingEvent = ev;
 
-  // 日付は月表示で選んでいる日。入力欄は置かず、見出しで示す。
-  $("compose-title").textContent = `${detailDateLabel(state.selectedDate)} に追加`;
+  if (ev) {
+    $("compose-title").textContent = `${detailDateLabel(ev.start)} の予定`;
+    $("c-submit").textContent = "保存";
+    $("c-title").value = displayTitle(ev);
+    $("c-allday").checked = ev.allDay;
+    $("c-start").value = ev.allDay ? "10:00" : hhmm(ev.start);
+    $("c-end").value = ev.allDay ? "11:00" : hhmm(ev.end);
+    composeCategory = ev.color?.categoryId ?? null;
+    // 日をまたぐ予定は時刻をこの画面で扱えないので隠す
+    $("c-times").dataset.multiDay = isMultiDay(ev) ? "1" : "0";
+  } else {
+    $("compose-title").textContent = `${detailDateLabel(state.selectedDate)} に追加`;
+    $("c-submit").textContent = "追加";
+    // 開始時刻は「次のキリのよい時刻」
+    const now = new Date();
+    const start = new Date(state.selectedDate);
+    start.setHours(isSameDay(state.selectedDate, now) ? now.getHours() + 1 : 10, 0, 0, 0);
+    $("c-start").value = hhmm(start);
+    $("c-end").value = hhmm(new Date(start.getTime() + 60 * 60_000));
+    composeCategory = null;
+    $("c-times").dataset.multiDay = "0";
+  }
 
-  // 開始時刻は「次のキリのよい時刻」
-  const now = new Date();
-  const start = new Date(state.selectedDate);
-  start.setHours(isSameDay(state.selectedDate, now) ? now.getHours() + 1 : 10, 0, 0, 0);
-  $("c-start").value = hhmm(start);
-  $("c-end").value = hhmm(new Date(start.getTime() + 60 * 60_000));
   lastStartMinutes = toMinutes($("c-start").value);
-
-  composeCategory = null;
   renderComposeChips();
-
   syncAllDay();
+
   $("compose").hidden = false;
   // preventScroll を付けないと、フォーム上部（見出し）が隠れる位置までスクロールしてしまう
   $("c-title").focus({ preventScroll: true });
@@ -713,7 +730,7 @@ function closeCompose() {
 }
 
 function syncAllDay() {
-  $("c-times").hidden = $("c-allday").checked;
+  $("c-times").hidden = $("c-allday").checked || $("c-times").dataset.multiDay === "1";
 }
 
 function hhmm(d) {
@@ -726,18 +743,21 @@ async function submitCompose(e) {
   const submit = $("c-submit");
   err.hidden = true;
 
+  const editing = editingEvent;
+  const keepTimes = editing && $("c-times").dataset.multiDay === "1";
+
   const input = {
     title: composeTitle(),
-    description: "", // 追加フォームにメモ欄は置いていない（詳細は Google 公式アプリで書く）
+    description: "", // メモ欄は置いていない。編集時も既存のメモには触れない。
     allDay: $("c-allday").checked,
-    date: dateKey(state.selectedDate),
+    date: dateKey(editing ? editing.start : state.selectedDate),
     startTime: $("c-start").value,
     endTime: $("c-end").value,
   };
 
   if (!composeCategory) return showComposeError("種類（色）を選んでください。");
   if (!$("c-title").value.trim()) return showComposeError("予定名を入力してください。");
-  if (!input.allDay) {
+  if (!input.allDay && !keepTimes) {
     if (!input.startTime || !input.endTime) return showComposeError("開始と終了の時刻を入力してください。");
     if (input.endTime <= input.startTime) return showComposeError("終了時刻は開始時刻より後にしてください。");
   }
@@ -749,14 +769,18 @@ async function submitCompose(e) {
   }
 
   submit.disabled = true;
-  submit.textContent = "追加中…";
+  submit.textContent = editing ? "保存中…" : "追加中…";
   try {
-    await createEvent(targetCalendarId(), input);
+    if (editing) {
+      // 日をまたぐ予定は名前だけ更新し、時刻には触れない
+      await updateEvent(editing.calendarId, editing.id, keepTimes ? { title: input.title } : input);
+    } else {
+      await createEvent(targetCalendarId(), input);
+    }
     closeCompose();
-    // 選択日を追加した日に合わせてから取り直す
     selectDate(input.date);
     await refresh({ force: true });
-    toast("予定を追加しました");
+    toast(editing ? "予定を保存しました" : "予定を追加しました");
   } catch (e2) {
     if (e2 instanceof AuthExpiredError) {
       closeCompose();
@@ -766,7 +790,7 @@ async function submitCompose(e) {
     showComposeError(e2.message || "追加に失敗しました。");
   } finally {
     submit.disabled = false;
-    submit.textContent = "追加";
+    submit.textContent = editing ? "保存" : "追加";
   }
 }
 
@@ -862,7 +886,7 @@ function bindEvents() {
     if (e.target.dataset.close) closeSheet();
   });
 
-  $("btn-add").addEventListener("click", openCompose);
+  $("btn-add").addEventListener("click", () => openCompose());
   $("compose").addEventListener("click", (e) => {
     if (e.target.dataset.composeClose) closeCompose();
   });

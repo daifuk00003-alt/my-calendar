@@ -105,6 +105,32 @@ export async function createEvent(calendarId, input) {
   return normalizeEvent(data, calendarId);
 }
 
+/**
+ * 予定を書き換える。渡した項目だけを更新する（メモなどは触らない）。
+ * @param {{title:string, allDay?:boolean, date?:string, startTime?:string, endTime?:string}} input
+ */
+export async function updateEvent(calendarId, eventId, input) {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body = { summary: input.title };
+
+  if (input.date) {
+    if (input.allDay) {
+      body.start = { date: input.date };
+      body.end = { date: nextDay(input.date) };
+    } else {
+      body.start = { dateTime: `${input.date}T${input.startTime}:00`, timeZone };
+      body.end = { dateTime: `${input.date}T${input.endTime}:00`, timeZone };
+    }
+  }
+
+  const data = await call(
+    `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    {},
+    { method: "PATCH", body }
+  );
+  return normalizeEvent(data, calendarId);
+}
+
 /** 予定を削除する（Google 側ではゴミ箱に入る） */
 export async function deleteEvent(calendarId, eventId) {
   await call(
