@@ -2,7 +2,7 @@
 // 閲覧専用。入力・編集は Google 公式アプリで行う（3.2 対象外）。
 
 import { MAX_BARS, MAX_BARS_2WEEKS, PREFETCH_MONTHS, HOLIDAY_CALENDAR_MARKER, SHOW_TITLE_IN_DETAIL, SHOW_TITLE_IN_MONTH, getBackend, setBackend, hasBackend } from "./config.js";
-import { ping, listCalendars, listEvents, createEvent, updateEvent, deleteEvent } from "./gas.js";
+import { ping, listCalendars, listEvents, createEvent, updateEvent, deleteEvent, fetchBackup } from "./gas.js";
 import { createClassifier, loadRuleSet, UNCLASSIFIED } from "./classify.js";
 import { textOn, readableOnWhite } from "./colors.js";
 import * as store from "./store.js";
@@ -768,6 +768,36 @@ function showComposeError(message) {
   err.hidden = false;
 }
 
+/* ============================ バックアップ ============================ */
+
+/**
+ * 全予定を .ics として端末に保存する。
+ * いま繋がっているアカウントが使えなくなっても、これがあれば過去の記録が残る。
+ */
+async function downloadBackup() {
+  const btn = $("btn-backup");
+  btn.disabled = true;
+  btn.textContent = "書き出し中…";
+  try {
+    const ics = await fetchBackup();
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `カレンダーバックアップ_${dateKey(new Date())}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    toast("バックアップを保存しました");
+  } catch (e) {
+    toast(e.message || "バックアップに失敗しました");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "予定をバックアップする（.ics）";
+  }
+}
+
 /* ============================ 設定画面（FR-08） ============================ */
 
 function openSettings() {
@@ -814,6 +844,8 @@ function bindEvents() {
   });
   $("btn-settings").addEventListener("click", openSettings);
   $("btn-settings-close").addEventListener("click", showMain);
+
+  $("btn-backup").addEventListener("click", downloadBackup);
 
   $("btn-logout").addEventListener("click", () => {
     if (!window.confirm("接続を解除します。もう一度URLと鍵の入力が必要になります。")) return;

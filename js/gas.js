@@ -93,6 +93,26 @@ export async function deleteEvent(calendarId, eventId) {
   await call({ action: "delete", calendar: calendarId, id: eventId });
 }
 
+/**
+ * 全カレンダーの予定を .ics 形式で書き出したものを取得する。
+ * 会社アカウントが使えなくなっても、これを端末に保存しておけば過去の記録が残る。
+ */
+export async function fetchBackup() {
+  const { url, key } = getBackend();
+  if (!url || !key) throw new NotConfiguredError();
+  const target = new URL(url);
+  target.searchParams.set("key", key);
+  target.searchParams.set("action", "backup");
+
+  const res = await fetch(target);
+  if (!res.ok) throw new Error(`バックアップの取得に失敗しました (${res.status})`);
+  const text = await res.text();
+  if (!text.startsWith("BEGIN:VCALENDAR")) {
+    throw new Error("接続先の公開設定を確認してください（アクセスできるユーザー＝全員）。");
+  }
+  return text;
+}
+
 /* ---------- 変換 ---------- */
 
 function toRange(input) {
