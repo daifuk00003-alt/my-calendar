@@ -780,6 +780,8 @@ async function downloadBackup() {
   btn.textContent = "書き出し中…";
   try {
     const ics = await fetchBackup();
+    // iOS はこの形式をカレンダーへの取り込みとして扱う。これは意図した挙動で、
+    // 「Apple のカレンダーアプリに実体をコピーする」こと自体をバックアップとしている。
     const blob = new Blob([ics], { type: "text/calendar" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
