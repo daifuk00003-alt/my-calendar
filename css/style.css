@@ -138,8 +138,10 @@ body { display: flex; flex-direction: column; }
 
 /* 2週間表示は1マスが高いぶん、2行まで見せて詳しくする（1ヶ月表示は1行のまま） */
 .grid.with-text.mode-2weeks .bar {
-  min-height: 28px;
+  min-height: 26px;
   padding: 2px 4px;
+  font-size: 9.5px;
+  letter-spacing: -0.02em;
   line-height: 1.25;
   white-space: normal;
   display: -webkit-box;
