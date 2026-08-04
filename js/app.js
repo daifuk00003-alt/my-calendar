@@ -248,6 +248,8 @@ function renderMonth() {
 
   const grid = $("grid");
   grid.classList.toggle("with-text", SHOW_TITLE_IN_MONTH);
+  // 2週間表示は1マスが高いので、バーの文字を2行まで見せて詳しくする（1ヶ月表示は変えない）
+  grid.classList.toggle("mode-2weeks", state.viewMode === "2weeks");
   const frag = document.createDocumentFragment();
   const today = startOfDay(new Date());
   const maxBars = state.viewMode === "2weeks" ? MAX_BARS_2WEEKS : MAX_BARS;

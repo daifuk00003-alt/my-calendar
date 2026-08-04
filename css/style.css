@@ -136,6 +136,18 @@ body { display: flex; flex-direction: column; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* 2週間表示は1マスが高いぶん、2行まで見せて詳しくする（1ヶ月表示は1行のまま） */
+.grid.with-text.mode-2weeks .bar {
+  min-height: 28px;
+  padding: 2px 4px;
+  line-height: 1.25;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
+
 /* 引っ張って更新（FR-04） */
 .pull-indicator {
   position: absolute; top: 0; left: 0; right: 0;

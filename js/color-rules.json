@@ -8,7 +8,8 @@
     { "id": "asobi",   "label": "遊び",       "color": "#f97316" },
     { "id": "study",   "label": "学習",       "color": "#a3e635" },
     { "id": "anything","label": "なんでも",   "color": "#ef4444" },
-    { "id": "aiplus",  "label": "AIプラス",   "color": "#ec4899" }
+    { "id": "aiplus",  "label": "AIプラス",   "color": "#ec4899" },
+    { "id": "block",   "label": "ブロック",   "color": "#000000" }
   ],
 
   "rules": [
@@ -18,6 +19,7 @@
     { "keyword": "【遊び】",       "category": "asobi" },
     { "keyword": "【学習】",       "category": "study" },
     { "keyword": "【なんでも】",   "category": "anything" },
-    { "keyword": "【AIプラス】",   "category": "aiplus" }
+    { "keyword": "【AIプラス】",   "category": "aiplus" },
+    { "keyword": "【ブロック】",   "category": "block" }
   ]
 }
